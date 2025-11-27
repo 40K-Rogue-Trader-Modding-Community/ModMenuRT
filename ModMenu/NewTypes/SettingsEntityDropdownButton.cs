@@ -20,12 +20,12 @@ namespace ModMenu.NewTypes
 {
   public class UISettingsEntityDropdownButton : UISettingsEntityDropdownInt
   {
-    internal LocalizedString ButtonText;
-    internal Sprite ButtonImage;
-    internal Action<int> OnClick;
+    internal LocalizedString? ButtonText;
+    internal Sprite? ButtonImage;
+    internal Action<int>? OnClick;
 
     internal static UISettingsEntityDropdownButton Create(
-      LocalizedString description, LocalizedString longDescription, LocalizedString buttonText, Action<int> onClick, Sprite buttonImage = null)
+      LocalizedString description, LocalizedString longDescription, LocalizedString buttonText, Action<int> onClick, Sprite? buttonImage = null)
     {
       var button = ScriptableObject.CreateInstance<UISettingsEntityDropdownButton>();
       button.m_Description = description;
@@ -46,7 +46,7 @@ namespace ModMenu.NewTypes
     private readonly UISettingsEntityDropdownButton buttonEntity;
 
     public string Text => buttonEntity.ButtonText;
-    public Sprite ButtonImage => buttonEntity.ButtonImage;
+    public Sprite? ButtonImage => buttonEntity.ButtonImage;
 
     internal SettingsEntityDropdownButtonVM(UISettingsEntityDropdownButton buttonEntity) : base(buttonEntity)
     {
@@ -62,7 +62,7 @@ namespace ModMenu.NewTypes
   internal class SettingsEntityDropdownButtonView
     : SettingsEntityDropdownPCView
   {
-    private SettingsEntityDropdownButtonVM VM => ViewModel as SettingsEntityDropdownButtonVM;
+    private SettingsEntityDropdownButtonVM VM => (SettingsEntityDropdownButtonVM)ViewModel;
 
     public override VirtualListLayoutElementSettings LayoutSettings
     {
@@ -80,7 +80,7 @@ namespace ModMenu.NewTypes
       }
     }
 
-    private VirtualListLayoutElementSettings m_LayoutSettings;
+    private VirtualListLayoutElementSettings? m_LayoutSettings;
 
     public override void BindViewImplementation()
     {
@@ -88,8 +88,13 @@ namespace ModMenu.NewTypes
       Title.text = VM.Title;
       ButtonLabel.text = VM.Text;
       ButtonLabel.gameObject.SetActive(!ButtonLabel.text.IsNullOrEmpty());
-      ButtonImage.sprite = VM.ButtonImage;
-      ButtonImage.gameObject.SetActive(ButtonImage.sprite != null);
+
+      if (ButtonImage != null)
+      {
+        ButtonImage.sprite = VM.ButtonImage;
+        ButtonImage.gameObject.SetActive(ButtonImage.sprite != null);
+      }
+
       AddDisposable(Button.OnLeftClickAsObservable().Subscribe(_OnLeftClick));
       AddDisposable(Button.OnMouseEnterAsObservable().Subscribe(_OnPointerEnter));
       AddDisposable(Button.OnMouseExitAsObservable().Subscribe(_OnPointerExit));
@@ -98,17 +103,17 @@ namespace ModMenu.NewTypes
       SetupColor(isHighlighted: false);
     }
 
-    private Color NormalColor = Color.clear;
-    private Color HighlightedColor = new(0.52f, 0.52f, 0.52f, 0.29f);
+    private new Color NormalColor = Color.clear;
+    private new Color HighlightedColor = new(0.52f, 0.52f, 0.52f, 0.29f);
 
     // These must be public or they'll be null
-    public Image HighlightedImage;
-    public TextMeshProUGUI Title;
-    public OwlcatMultiButton Button;
-    public TextMeshProUGUI ButtonLabel;
-    public Image ButtonImage;
+    public Image? HighlightedImage;
+    public TextMeshProUGUI Title = null!;
+    public OwlcatMultiButton? Button;
+    public TextMeshProUGUI ButtonLabel = null!;
+    public Image? ButtonImage;
 
-    private void SetupColor(bool isHighlighted)
+    private new void SetupColor(bool isHighlighted)
     {
       if (HighlightedImage != null)
       {

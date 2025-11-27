@@ -11,7 +11,7 @@ namespace ModMenu.NewTypes
   [HarmonyPatch]
   internal abstract class DropdownItemVM_Extended : DropdownItemVM
   {
-    public DropdownItemVM_Extended(string text, Sprite icon = null) : base(text, icon)
+    public DropdownItemVM_Extended(string text, Sprite? icon = null) : base(text, icon)
     {
 
     }

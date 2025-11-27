@@ -1,12 +1,6 @@
-﻿using HarmonyLib;
-using Kingmaker.Modding;
+﻿using Kingmaker.Modding;
 using Kingmaker.PubSubSystem.Core;
 using Kingmaker.PubSubSystem.Core.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static UnityModManagerNet.UnityModManager;
 
 namespace ModMenu.NewTypes.ModRecording
@@ -48,7 +42,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPostfix]
     internal static void RaiseOMMStateChangedEvent(OwlcatModification __instance)
     {
-      EventBus.RaiseEvent<ISubscriberToModStateChange>(subscriber => subscriber.OnOMMModStateChanged(__instance?.Manifest.UniqueName, false));
+      EventBus.RaiseEvent<ISubscriberToModStateChange>(subscriber => subscriber.OnOMMModStateChanged(__instance.Manifest.UniqueName, false));
     }
   }
 }

@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
 using UniRx;
-using HarmonyLib;
 using Kingmaker.EntitySystem.Persistence;
 using Kingmaker.Code.UI.MVVM.VM.SaveLoad;
 using Kingmaker.Utility;
@@ -18,7 +11,7 @@ namespace ModMenu.NewTypes.ModRecording
   [HarmonyPatch]
   internal class SaveSlotWithModListVM : SaveSlotVM, ISubscriberToModStateChange
   {
-    public static readonly List<string> NamesExclusions = new() { "0ToyBox0", "MicroPatches", "ModMenu", "UnityExplorer_B" };
+    public static readonly List<string> NamesExclusions = new() { "0ToyBox0", "WrathPatches", "ModMenu", "UnityExplorer_B" };
     public List<ModInfo> OwlMods = new();
     public List<ModInfo> UMMMods = new();
     public List<ModInfo> OtherMods = new();
@@ -43,7 +36,7 @@ namespace ModMenu.NewTypes.ModRecording
     public ReactiveProperty<ModRecordState> StateOfMods = new();
     public ReactiveCommand<SaveSlotWithModListVM> ReactiveRefresh = new();
 
-    internal SaveSlotModRecordView BoundModRecordView;
+    internal SaveSlotModRecordView? BoundModRecordView;
 
 
     public SaveSlotWithModListVM(SaveInfo saveInfo, IReadOnlyReactiveProperty<SaveLoadMode> mode, SaveLoadActions saveLoadActions, bool allowSwitchOff = false)
@@ -78,7 +71,9 @@ namespace ModMenu.NewTypes.ModRecording
 
     public void OnUMMModStateChanged(ModEntry entry, bool IsBatch)
     {
+#if DEBUG
       Main.Logger.Log($"SaveSlotWithModListVM Running OnModStateChanged for save slot {Reference?.Name ?? "NULL"} for mod {entry.Info.Id}");
+#endif
       var m = UMMMods.FirstOrDefault(m => m.mod == entry);
       if (m is null)
       {
@@ -91,7 +86,9 @@ namespace ModMenu.NewTypes.ModRecording
     }
     public void OnOMMModStateChanged(string entry, bool IsBatch)
     {
+#if DEBUG
       Main.Logger.Log($"SaveSlotWithModListVM Running OnModStateChanged for save slot {Reference?.Name ?? "NULL"}");
+#endif
       var m = OwlMods.FirstOrDefault(m => m.record.Id == entry);
       if (m is null)
       {

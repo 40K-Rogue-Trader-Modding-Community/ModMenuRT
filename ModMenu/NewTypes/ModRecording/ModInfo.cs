@@ -1,12 +1,7 @@
 ﻿using Kingmaker.Modding;
 using Kingmaker.Utility.DotNetExtensions;
 using Kingmaker.Utility.UnityExtensions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Policy;
 using System.Text;
-using System.Threading.Tasks;
 using UnityModManagerNet;
 using static Kingmaker.EntitySystem.Persistence.Versioning.PlayerUpgraderOnlyActions.EnsureUniqueItems;
 using static ModMenu.NewTypes.ModRecording.SaveInfoWithModList;
@@ -21,13 +16,13 @@ namespace ModMenu.NewTypes.ModRecording
 
     internal ModRecord record;
 
-    private UnityModManager.ModEntry UM;
-    private OwlcatModification OM;
+    private UnityModManager.ModEntry? UM;
+    private OwlcatModification? OM;
     private bool searched;
 
-    private Version ParsedVersion;
+    private Version? ParsedVersion;
 
-    internal object mod
+    internal object? mod
     {
       get
       {
@@ -63,8 +58,8 @@ namespace ModMenu.NewTypes.ModRecording
 
     }
 
-    private string m_CachedDisplayName;
-    internal string DisplayName
+    private string? m_CachedDisplayName;
+    internal string? DisplayName
     {
       get
       {
@@ -98,7 +93,7 @@ namespace ModMenu.NewTypes.ModRecording
           state = ModState.Uninstalled;
         else if (!OwlcatModificationsManager.Instance.m_Settings.EnabledModifications.Contains(entry.Manifest.UniqueName))
           state = ModState.Disabled;
-        else if (ParsedVersion == null || !TryGetVersion(entry.Manifest, out Version parsed))
+        else if (ParsedVersion == null || !TryGetVersion(entry.Manifest, out Version? parsed))
           state = ModState.Undefined;
         else if (parsed < ParsedVersion)
           state = ModState.Outdated;
@@ -106,7 +101,7 @@ namespace ModMenu.NewTypes.ModRecording
           state = ModState.Good;
       else state = ModState.Good;
 
-      bool TryGetVersion(OwlcatModificationManifest manifest, out Version parsed)
+      bool TryGetVersion(OwlcatModificationManifest manifest, out Version? parsed)
       {
         try
         {

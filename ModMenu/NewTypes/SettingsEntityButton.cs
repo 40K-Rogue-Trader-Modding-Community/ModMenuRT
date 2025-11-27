@@ -16,8 +16,8 @@ namespace ModMenu.NewTypes
 {
   public class UISettingsEntityButton : UISettingsEntityBase
   {
-    internal LocalizedString ButtonText;
-    internal Action OnClick;
+    internal LocalizedString? ButtonText;
+    internal Action? OnClick;
 
     internal static UISettingsEntityButton Create(
       LocalizedString description, LocalizedString longDescription, LocalizedString buttonText, Action onClick)
@@ -71,13 +71,13 @@ namespace ModMenu.NewTypes
       }
     }
 
-    private VirtualListLayoutElementSettings m_LayoutSettings;
+    private VirtualListLayoutElementSettings? m_LayoutSettings;
 
     public override void BindViewImplementation()
     {
-      Title.text = ViewModel.Title;
-      ButtonLabel.text = ViewModel.Text;
-      Button.OnLeftClick.RemoveAllListeners();
+      Title!.text = ViewModel.Title;
+      ButtonLabel!.text = ViewModel.Text;
+      Button!.OnLeftClick.RemoveAllListeners();
       Button.OnLeftClick.AddListener(() =>
       {
         ViewModel.PerformClick();
@@ -90,10 +90,10 @@ namespace ModMenu.NewTypes
     private Color HighlightedColor = new(0.52f, 0.52f, 0.52f, 0.29f);
 
     // These must be public or they'll be null
-    public Image HighlightedImage;
-    public TextMeshProUGUI Title;
-    public OwlcatMultiButton Button;
-    public TextMeshProUGUI ButtonLabel;
+    public Image? HighlightedImage;
+    public TextMeshProUGUI? Title;
+    public OwlcatMultiButton? Button;
+    public TextMeshProUGUI? ButtonLabel;
 
     private void SetupColor(bool isHighlighted)
     {

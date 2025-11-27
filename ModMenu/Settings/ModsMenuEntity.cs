@@ -20,9 +20,9 @@ namespace ModMenu.Settings
     internal static readonly UISettingsManager.SettingsScreen SettingsScreenId =
       (UISettingsManager.SettingsScreen)SettingsScreenValue;
 
-    internal static SettingsVM settingVM;
+    internal static SettingsVM settingVM = null!;
 
-    private static LocalizedString _menuTitleString;
+    private static LocalizedString? _menuTitleString;
     private static LocalizedString MenuTitleString
     {
       get

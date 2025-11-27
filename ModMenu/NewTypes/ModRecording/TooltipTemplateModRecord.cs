@@ -1,8 +1,6 @@
 ﻿using Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks;
 using Kingmaker.Utility;
 using Owlcat.Runtime.UI.Tooltips;
-using System.Collections.Generic;
-using System.Linq;
 using UniRx;
 using static Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks.TooltipTextType;
 using static ModMenu.NewTypes.ModRecording.SaveInfoWithModList;
@@ -23,7 +21,7 @@ namespace ModMenu.NewTypes.ModRecording
 
     TooltipTemplateModRecordEnum DependencyFilter;
     //SaveSlotModRecordView View;
-    SaveSlotWithModListVM saveSlotWithModListVM;
+    SaveSlotWithModListVM? saveSlotWithModListVM;
 
     internal TooltipTemplateModRecord(TooltipTemplateModRecordEnum noDep, SaveSlotModRecordView component)
     {

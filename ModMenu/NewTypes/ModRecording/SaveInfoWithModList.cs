@@ -10,7 +10,6 @@ using Kingmaker.Modding;
 using Kingmaker.EntitySystem.Persistence.Versioning;
 using Kingmaker.Utility.UnityExtensions;
 using Kingmaker.Utility.Serialization;
-using System.IO.Compression;
 
 namespace ModMenu.NewTypes.ModRecording
 {
@@ -19,9 +18,9 @@ namespace ModMenu.NewTypes.ModRecording
   {
     const string ModListJsonFileName = "header.json.ModList";
 
-    public List<ModRecord> UmmModRecordList;
-    public List<ModRecord> OwlModRecordList;
-    public List<ModRecord> OtherModRecordList;
+    public List<ModRecord>? UmmModRecordList;
+    public List<ModRecord>? OwlModRecordList;
+    public List<ModRecord>? OtherModRecordList;
 
     [JsonObject]
     [Serializable]
@@ -30,9 +29,9 @@ namespace ModMenu.NewTypes.ModRecording
       [JsonProperty]
       public ModType modType;
       [JsonProperty]
-      public string Id;
+      public string Id = null!;
       [JsonProperty]
-      public string Version;
+      public string? Version;
 
       internal enum ModType
       {
@@ -60,15 +59,15 @@ namespace ModMenu.NewTypes.ModRecording
           .Select(m => new ModRecord() { modType = ModRecord.ModType.OwlMod, Id = m.Manifest.UniqueName, Version = m.Manifest.Version }))
         .ToArray();
     }
-    static MethodInfo OwlcatJsonConvert_DeserializeObject_SaveInfo;
-    static CodeInstruction OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList;
+    static MethodInfo OwlcatJsonConvert_DeserializeObject_SaveInfo = null!;
+    static CodeInstruction OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList = null!;
 
     [HarmonyPrepare]
     static bool PreparePatchForSaveInfoWithModList()
     {
-      OwlcatJsonConvert_DeserializeObject_SaveInfo = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), [typeof(JsonSerializer), typeof(string)], [typeof(SaveInfo)]);
+      OwlcatJsonConvert_DeserializeObject_SaveInfo = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), new Type[2] { typeof(JsonSerializer), typeof(string) }, new Type[1] { typeof(SaveInfo) });
 
-      var newMethod = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), [typeof(JsonSerializer), typeof(string)], [typeof(SaveInfoWithModList)]);
+      var newMethod = AccessTools.DeclaredMethod(typeof(JsonExtensions), nameof(JsonExtensions.DeserializeObject), new Type[2] { typeof(JsonSerializer), typeof(string)}, new Type[1] { typeof(SaveInfoWithModList) });
       OwlcatJsonConvert_DeserializeObject_SaveInfoWithModList = new CodeInstruction(OpCodes.Callvirt, newMethod);
 
       return OwlcatJsonConvert_DeserializeObject_SaveInfo != null && newMethod != null;
@@ -118,8 +117,8 @@ namespace ModMenu.NewTypes.ModRecording
           Main.Logger.Warning($"Save file {__result?.Name ?? "NULL"} has null saver! Can't read the mod list");
           return;
         }
-        var text = ReadJsonExploited((ZipSaver)saver, ModListJsonFileName);
-        ModRecord[] arr = null;
+        var text = saver.ReadJson(ModListJsonFileName);
+        ModRecord[]? arr = null;
         if (!text.IsNullOrEmpty())
           arr = SaveSystemJsonSerializer.Serializer.DeserializeObject<ModRecord[]>(text);
         if (arr != null && __result is SaveInfoWithModList saveInfoWithMods)
@@ -157,10 +156,10 @@ namespace ModMenu.NewTypes.ModRecording
     static class PatchToSerializeModInfo
     {
 
-      static MethodInfo targetMethod;
-      static FieldInfo saveInfoReflected;
+      static MethodInfo? targetMethod;
+      static FieldInfo? saveInfoReflected;
       [HarmonyTargetMethod]
-      static MethodBase TargetMethod()
+      static MethodBase? TargetMethod()
       {
         var types = typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Instance);
         foreach (var t in types)
@@ -195,7 +194,7 @@ namespace ModMenu.NewTypes.ModRecording
             yield return new CodeInstruction(OpCodes.Call, typeof(SaveSystemJsonSerializer).GetProperty(nameof(SaveSystemJsonSerializer.Serializer)).GetMethod);
             yield return CodeInstruction.Call(() => CollectModRecords());
             yield return CodeInstruction.Call((JsonSerializer serializer, ModRecord[] records) => JsonExtensions.SerializeObject(serializer, records));
-            yield return CodeInstruction.Call((ZipSaver saver, string name, string json) => SaveJsonExploited(saver, name, json));
+            yield return new CodeInstruction(OpCodes.Callvirt, typeof(ISaver).GetMethod(nameof(ISaver.SaveJson)));
             yield return new CodeInstruction(OpCodes.Ldsfld, typeof(Main).GetField(nameof(Main.Logger), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic));
             yield return new CodeInstruction(OpCodes.Ldstr, "Done saving ModRecords");
             yield return new CodeInstruction(OpCodes.Callvirt, typeof(UnityModManager.ModEntry.ModLogger).GetMethod("Log", new Type[] { typeof(string) }));
@@ -204,43 +203,6 @@ namespace ModMenu.NewTypes.ModRecording
         }
       }
     }
-
-    public static void SaveJsonExploited(ZipSaver saver, string name, string json)
-    {
-      name += ".json";
-      ZipArchiveEntry zipArchiveEntry = saver.FindEntry(name);
-      if (zipArchiveEntry == null)
-      {
-        zipArchiveEntry = saver.ZipFile.CreateEntry(name);
-      }
-      using (Stream stream = zipArchiveEntry.Open())
-      {
-        using (StreamWriter streamWriter = new StreamWriter(stream))
-        {
-          streamWriter.Write(json);
-          if (saver.m_Mode != ISaver.Mode.WriteOnly)
-          {
-            stream.SetLength(stream.Position);
-          }
-        }
-      }
-    }
-
-    public static string ReadJsonExploited(ZipSaver saver, string name)
-    {
-      ZipArchiveEntry zipArchiveEntry = saver.FindEntry(name + ".json");
-      if (zipArchiveEntry == null)
-      {
-        return null;
-      }
-      string result;
-      using (StreamReader streamReader = new StreamReader(zipArchiveEntry.Open()))
-      {
-        result = streamReader.ReadToEnd();
-      }
-      return result;
-    }
-
     #region OldPatchToNotReadModRecord
 
 
