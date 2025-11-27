@@ -11,7 +11,7 @@ namespace ModMenu.NewTypes.ModRecording
   [HarmonyPatch]
   internal class SaveSlotWithModListVM : SaveSlotVM, ISubscriberToModStateChange
   {
-    public static readonly List<string> NamesExclusions = new() { "0ToyBox0", "WrathPatches", "ModMenu", "UnityExplorer_B" };
+    public static readonly List<string> NamesExclusions = new() { "0ToyBox0", "MicroPatches", "ModMenu", "CinematicUnityExplorer" };
     public List<ModInfo> OwlMods = new();
     public List<ModInfo> UMMMods = new();
     public List<ModInfo> OtherMods = new();
@@ -136,20 +136,20 @@ namespace ModMenu.NewTypes.ModRecording
       var toybox = UnityModManager.ModEntries.FirstOrDefault(mod => mod.Info.Id.Contains("ToyBox"))?.Assembly;
       if (toybox != null)
       {
-        Main.Logger.Log("Detected toybox, will try to add SaveLoadViews.SaveLoadVMPatch.UpdateSavesCollection method to patches"); // it's a bool Prefix that skips the original >_<
+        Main.Logger.Log("Detected ToyBox, will try to add SaveLoadViews.SaveLoadVMPatch.UpdateSavesCollection method to patches"); // it's a bool Prefix that skips the original >_<
 
         var method = AccessTools.Method(AccessTools.TypeByName("SaveLoadVMPatch"), "UpdateSavesCollection");
 
         if (method is not null)
         {
-          Main.Logger.Log($"Method was found");
+          Main.Logger.Log($"SaveLoadVMPatch method was found");
           yield return method;
         }
         else
           Main.Logger.Warning($"Method of Enhanced Saves was not found! Display of mod record is likely to fail.");
       }
       else
-        Main.Logger.Log($"Detected toybox NOT.");
+        Main.Logger.Log($"Didn't detect ToyBox.");
     }
 
     //[HarmonyPatch(typeof(SaveLoadVM), nameof(SaveLoadVM.HandleSaveListUpdate))]

@@ -9,7 +9,6 @@
 		<Version>2.3.2</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<RootNamespace>ModMenu</RootNamespace>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<Nullable>enable</Nullable>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<RestoreAdditionalProjectSources>https://api.nuget.org/v3/index.json</RestoreAdditionalProjectSources>
@@ -66,7 +65,7 @@
 	</ItemGroup>
 	<Target Name="EmptyModDir" BeforeTargets="Build">
 		<ItemGroup>
-			<ModDir Include="$(RogueTraderData)\UnityModManager\$(RootNamespace)\*.*" Exclude="$(RogueTraderData)\UnityModManager\$(RootNamespace)\*.xml" />
+			<ModDir Include="$(RogueTraderData)\UnityModManager\$(RootNamespace)\*.*" />
 		</ItemGroup>
 		
 		<Delete Files="@(ModDir)" />

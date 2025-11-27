@@ -83,7 +83,7 @@ For more examples see [TestSettings](https://github.com/40K-Rogue-Trader-Modding
 
 ### Best Practices
 
-* **Do not add settings during mod load,** without additional handling you cannot create a `LocalizedString`. I recommend adding settings before, during, or after `BlueprintsCache.Init()`.
+* **Do not add settings during mod load,** without additional handling you cannot create a `LocalizedString`. It is recommended to add settings before, during, or after `BlueprintsCache.Init()`.
 * Don't use `IsModificationAllowed` to enable/disable a setting based on another setting. This is checked when the page is opened so it won't apply immediately.
 * Indicate settings which require reboot using `WithLongDescription()`. The game's setting boolean `RequireReboot` does nothing.
 
@@ -114,7 +114,7 @@ Just make sure you always get the key the same way when getting a setting value.
     * You do not need to handle saving or restoring settings at all, though save dependent settings may be lost if the mod is disabled
 * `OnValueChanged()` is called after the user clicks "Apply" and confirms
 * `OnTempValueChanged()` is called immediately after the user changes the value, but before it is applied
-* A setting's value can be checked at any time by calling [GetSettingValue()](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/blob/main/ModMenu/ModMenu.cs#L85)
+* A setting's value can be checked at any time by calling [GetSettingValue()](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/blob/main/ModMenu/ModMenu.cs#L169)
 
 ## Acknowledgements
 
