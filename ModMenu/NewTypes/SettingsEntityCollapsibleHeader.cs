@@ -1,10 +1,9 @@
 ﻿using Kingmaker.UI.Common;
-using Kingmaker.UI.MVVM._PCView.ServiceWindows.Journal;
-using Kingmaker.UI.MVVM._VM.Settings.Entities.Decorative;
+using Kingmaker.Code.UI.MVVM.View.ServiceWindows.Journal;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities.Decorative;
 using Owlcat.Runtime.UI.Controls.Button;
 using Owlcat.Runtime.UI.MVVM;
 using Owlcat.Runtime.UI.VirtualListSystem.ElementSettings;
-using System.Collections.Generic;
 using TMPro;
 
 namespace ModMenu.NewTypes
@@ -16,7 +15,7 @@ namespace ModMenu.NewTypes
     private bool Initialized = false;
     internal bool Expanded { get; private set; }
 
-    public SettingsEntityCollapsibleHeaderVM(string title, bool expanded = false) : base(title)
+    public SettingsEntityCollapsibleHeaderVM(string title, bool expanded = false) : base(Helpers.CreateString("SettingsEntityCollapsibleHeaderVM.title",title))
     {
       Expanded = expanded;
     }
@@ -100,16 +99,17 @@ namespace ModMenu.NewTypes
     public OwlcatMultiButton Button;
     public ExpandableCollapseMultiButtonPC ButtonPC;
 
-    protected override void BindViewImplementation()
+    public override void BindViewImplementation()
     {
-      Title.text = UIUtility.GetSaberBookFormat(ViewModel.Tittle, size: GetFontSize());
+      //Title.text = UIUtility.GetBookFormat(ViewModel.Tittle, size: GetFontSize());
+      Title.text = ViewModel.Tittle;
       Button.OnLeftClick.RemoveAllListeners();
       Button.OnLeftClick.AddListener(() => ViewModel.Toggle(ButtonPC));
       ViewModel.Init(ButtonPC);
     }
 
-    protected virtual int GetFontSize() { return 140; }
+    public virtual int GetFontSize() { return 140; }
 
-    protected override void DestroyViewImplementation() { }
+    public override void DestroyViewImplementation() { }
   }
 }

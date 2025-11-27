@@ -1,25 +1,21 @@
-﻿using Kingmaker.Localization;
+﻿using Kingmaker;
+using Kingmaker.Localization;
 using Kingmaker.Settings;
-using Kingmaker.UI.SettingsUI;
 using System.Text;
-using static Kingmaker.UI.KeyboardAccess;
 using UnityEngine;
-using HarmonyLib;
-using Kingmaker.UI;
-using Kingmaker;
-using System;
-using System.Collections.Generic;
-using System.Security.Principal;
-using Kingmaker.GameModes;
+using Kingmaker.UI.InputSystems.Enums;
+using Kingmaker.Settings.Entities;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.UI.InputSystems;
 
 namespace ModMenu.Settings
 {
   public class KeyBinding
     : BaseSettingWithValue<KeyBindingPair, SettingsEntityKeyBindingPair, UISettingsEntityKeyBinding, KeyBinding>
   {
-    private GameModesGroup GameModesGroup;
-    private string PrimaryBinding = null;
-    private string SecondaryBinding = null;
+    private GameModesGroup GameModesGroup = GameModesGroup.AllExceptBugReport;
+    private string PrimaryBinding = string.Empty;
+    private string SecondaryBinding = string.Empty;
     private KeyBindingPair DefaultOverride;
     private bool IsHoldTrigger = false;
 
@@ -31,16 +27,8 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityKeyBindingPair CreateEntity()
     {
-      DefaultOverride = DefaultValue;
-      if (!string.IsNullOrEmpty(PrimaryBinding))
-      {
-        var bindingString = new StringBuilder($"!{PrimaryBinding}");
-        if (!string.IsNullOrEmpty(SecondaryBinding))
-          bindingString.Append($";{SecondaryBinding}");
-
-        DefaultOverride = new(bindingString.ToString(), GameModesGroup);
-      }
-      return new SettingsEntityKeyBindingPair(Key, DefaultOverride, SaveDependent, RebootRequired);
+      DefaultOverride = new("!" + String.Join(";", PrimaryBinding, SecondaryBinding, GameModesGroup, IsHoldTrigger));
+      return new SettingsEntityKeyBindingPair(SettingsController.Instance, Key, DefaultOverride, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityKeyBinding CreateUIEntity()
@@ -48,6 +36,7 @@ namespace ModMenu.Settings
       var uiEntity = ScriptableObject.CreateInstance<UISettingsEntityKeyBinding>();
       uiEntity.name = Key;
       uiEntity.IsHoldTrigger = IsHoldTrigger;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 
@@ -93,9 +82,9 @@ namespace ModMenu.Settings
 
     /// <inheritdoc cref="BaseSettingWithValue{T, TEntity, TUIEntity, TBuilder}.BaseSettingWithValue(string, T, LocalizedString)"/>
     /// 
-    /// <param name="gameModesGroup">Indicates in which game modes the key binding functions</param>
+    /// <param name="gameModesGroup">Indicates in which game modes the key binding functions. Default is AllButBugReport</param>
     public KeyBinding(string key, GameModesGroup gameModesGroup, LocalizedString description)
-      : base(key, new("", gameModesGroup), description)
+      : base(key, new($"!;;{gameModesGroup};false"), description)
     {
       GameModesGroup = gameModesGroup;
     }

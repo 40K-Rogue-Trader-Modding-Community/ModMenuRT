@@ -1,37 +1,28 @@
-# This mod is now maintained here: https://github.com/CasDragon/ModMenu/
-
-# ModMenu
+# ModMenu RT
 
 Adds a new page to the game options for mods. This allows mods to easily implement settings using native UI instead of UMM. This does not create a save dependency.
 
-![Test settings screenshot](https://github.com/WittleWolfie/ModMenu/blob/main/test_settings.png)
-
-![More settings screenshot](https://github.com/WittleWolfie/ModMenu/blob/main/more_settings.png)
+<p align="center"><img src="Img/ModMenuRT_Example.jpg?raw=true" alt="Test Settings Screenshot"/></p>
 
 ## Installation
 
-1. Install [Unity Mod Manager](https://github.com/newman55/unity-mod-manager) (UMM), minimum version 0.23.0, and configure for use with Wrath
-2. Install [ModFinder](https://github.com/Pathfinder-WOTR-Modding-Community/ModFinder) and use it to search for Mewsifer Console
-3. Click "Install"
+1. Download the latest version of the mod from the [Releases](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/releases/latest) section.
+1. Extract the archive into the game's UMM mod folder - `%userprofile%\AppData\LocalLow\Owlcat Games\Warhammer 40000 Rogue Trader\UnityModManager\` on Windows.
 
-If you don't want to use ModFinder you can download the [latest release](https://github.com/WittleWolfie/ModMenu/releases/latest) and install normally using UMM.
+Alternatively:
+
+1. Download and install [ModFinder RT](https://www.nexusmods.com/warhammer40kroguetrader/mods/146).
+1. Run ModFinder, find the ModMenu RT listing, and click the "Install" button.
+
+***N.B.***: If you install a mod via ModFinder that has ModMenu as a requirement, ModFinder will automatically install ModMenu if you don't already have it.
 
 ## Problems or Suggestions
 
-File an [issue on GitHub](https://github.com/WittleWolfie/ModMenu/issues/new) or reach out to me (@WittleWolfie) on [Discord](https://discord.com/invite/wotr) in #mod-dev-technical or #mod-user-general channel.
+File an [issue on GitHub](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/issues/new) or join the official [Owlcat Discord](https://discord.com/invite/owlcat) and ask for help in the #mod-user-general channel.
 
 ### Controller Support
 
-**This does not support controllers**. It's a lot of work to support, but let me know if you need this. If there is enough demand I will add it.
-
-## Mods Using ModMenu
-
-This is a non-exhaustive list, let me know if you want your mod added here!
-
-* [Added Feats](https://github.com/Telyl/AddedFeats)
-* [BOAT BOAT BOAT](https://github.com/Balkoth-dev/WOTR_BOAT_BOAT_BOAT)
-* [Character Options+](https://github.com/WittleWolfie/CharacterOptionsPlus)
-* [MewsiferConsole](https://github.com/Pathfinder-WOTR-Modding-Community/MewsiferConsole)
+**The mod does not support controllers at this time**. 
 
 ## Mod Developers
 
@@ -45,7 +36,7 @@ This is a non-exhaustive list, let me know if you want your mod added here!
 
 ### How to use it
 
-The screenshot above was generated using [TestSettings](https://github.com/WittleWolfie/ModMenu/blob/main/ModMenu/Settings/TestSettings.cs). That exercises every function supported. The API is documented and generally self-explanatory.
+Refer to [TestSettings](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/blob/main/ModMenu/Settings/TestSettings.cs). That exercises every function supported. The API is documented and generally self-explanatory.
 
 In your mod's `Info.json` add `ModMenu` as a requirement:
 
@@ -53,15 +44,15 @@ In your mod's `Info.json` add `ModMenu` as a requirement:
 "Requirements": ["ModMenu"]
 ```
 
-You should specify a minimum version:
+You can also specify a minimum version:
 
 ```json
-"Requirements": ["ModMenu-1.1.0"]
+"Requirements": ["ModMenu-2.3.2"]
 ```
 
 It's safest to just specify the version you build against as the minimum version, but methods added after 1.0 do specify the version in their remarks.
 
-Install ModMenu then in your mod's project add `%WrathPath%/Mods/ModMenu/ModMenu.dll` as an assembly reference.
+Install ModMenu then in your mod's csproj add `$(RogueTraderData)\UnityModManager\ModMenu\ModMenu_RT.dll` as an assembly reference (for NuGet template projects).
 
 ### Basic Usage
 
@@ -88,7 +79,7 @@ ModMenu.GetSettingValue<bool>("mymod-settings-toggle");
 
 **The game handles the setting value for you.** You do not need to save the setting, or set the setting to a specific value. You *can* set it if necessary but most of the time it isn't necessary. This includes saving settings that you flag as per-save using `DependsOnSave()`.
 
-For more examples see [TestSettings](https://github.com/WittleWolfie/ModMenu/blob/main/ModMenu/Settings/TestSettings.cs).
+For more examples see [TestSettings](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/blob/main/ModMenu/Settings/TestSettings.cs).
 
 ### Best Practices
 
@@ -123,15 +114,15 @@ Just make sure you always get the key the same way when getting a setting value.
     * You do not need to handle saving or restoring settings at all, though save dependent settings may be lost if the mod is disabled
 * `OnValueChanged()` is called after the user clicks "Apply" and confirms
 * `OnTempValueChanged()` is called immediately after the user changes the value, but before it is applied
-* A setting's value can be checked at any time by calling [GetSettingValue()](https://github.com/WittleWolfie/ModMenu/blob/main/ModMenu/ModMenu.cs#L85)
+* A setting's value can be checked at any time by calling [GetSettingValue()](https://github.com/40K-Rogue-Trader-Modding-Community/ModMenuRT/blob/main/ModMenu/ModMenu.cs#L85)
 
 ## Acknowledgements
 
-* A shout out to Bubbles (factsubio) who essentially wrote the new image and button settings types when I was about to give up.
-* The modding community on [Discord](https://discord.com/invite/wotr), an invaluable and supportive resource for help modding.
-* All the Owlcat modders who came before me, wrote documents, and open sourced their code.
+* A shout out to Bubbles (factsubio) who essentially wrote the new image and button settings types when WittleWolfie was about to give up.
+* The modding community on [Discord](https://discord.com/invite/owlcat), an invaluable and supportive resource for help modding.
+* All the Owlcat modders who came before, wrote documents, and open sourced their code.
 
-## Interested in modding?
+## Interested in Creating Mods?
 
 * Check out the [OwlcatModdingWiki](https://github.com/WittleWolfie/OwlcatModdingWiki/wiki).
-* Join us on [Discord](https://discord.com/invite/wotr).
+* Join us on [Discord](https://discord.com/invite/owlcat) in the #mod-dev-technical channel.

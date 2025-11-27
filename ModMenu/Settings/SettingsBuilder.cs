@@ -1,17 +1,23 @@
 ﻿using Kingmaker;
 using Kingmaker.Localization;
-using Kingmaker.PubSubSystem;
+using Kingmaker.Modding;
+using Kingmaker.PubSubSystem.Core;
 using Kingmaker.Settings;
-using Kingmaker.UI;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets.Dropdowns;
+using Kingmaker.Settings.Interfaces;
+using Kingmaker.Settings.Entities;
+using Kingmaker.Utility.UnityExtensions;
 using ModMenu.NewTypes;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using UnityModManagerNet;
+using Kingmaker.Code.UI.MVVM.VM.MessageBox;
+using Kingmaker.PubSubSystem;
 
 namespace ModMenu.Settings
 {
+#pragma warning disable CS1591 // stupid documentation requests
   /// <summary>
   /// Builder API for constructing settings.
   /// </summary>
@@ -70,7 +76,17 @@ namespace ModMenu.Settings
   /// </remarks>
   public class SettingsBuilder
   {
-    private readonly UISettingsGroup Group = ScriptableObject.CreateInstance<UISettingsGroup>();
+    private object Mod;
+    private bool AllowDisabling;
+    private bool DoesNotCauseSaveDependency;
+    private string UniqueName;
+    private LocalizedString ModName;
+    private LocalizedString ModDescription;
+    private string Author = "";
+    private string Version = "";
+    private Sprite modIllustration;
+    private readonly List<UISettingsGroup> GroupList = new();
+    private UISettingsGroup Group; // it will be now initialized by the instance constructor through a call to AddAnotherSettingsGroup.
     private readonly List<UISettingsEntityBase> Settings = new();
     private readonly Dictionary<string, ISettingsEntity> SettingsEntities = new();
     private Action OnDefaultsApplied;
@@ -81,13 +97,122 @@ namespace ModMenu.Settings
     /// <param name="title">Title of the settings group, displayed on the settings page</param>
     public static SettingsBuilder New(string key, LocalizedString title)
     {
-      return new(key, title);
+      return new SettingsBuilder(key, title);
     }
 
-    public SettingsBuilder(string key, LocalizedString title)
+    /// <param name="key">
+    /// Globally unique key / name for the settings group. Use only lowercase letters, numbers, '-', and '.'
+    /// </param>
+    /// <param name="title">Title of the settings group, displayed on the settings page</param>
+    public SettingsBuilder(string key, LocalizedString title) : this()
     {
-      Group.name = key.ToLower();
-      Group.Title = title;
+      AddAnotherSettingsGroup(key, title);
+    }
+
+    private SettingsBuilder() { }
+
+    /// <summary>
+    /// Creates a new group of settings.
+    /// </summary>
+    /// <param name="key"></param>
+    /// Globally unique key / name for the settings group. Use only lowercase letters, numbers, '-', and '.'
+    /// <param name="title"></param>
+    /// Title of the settings group, displayed on the settings page
+    public SettingsBuilder AddAnotherSettingsGroup(string key, LocalizedString title)
+    {
+      if (GroupList.Any() && GroupList.Any(g => g.name.Equals(key)))
+        Main.Logger.Warning("An attempt to create a new Settings group with an existing key");
+
+      var group = ScriptableObject.CreateInstance<UISettingsGroup>();
+      group.name = key;
+      group.Title= title;
+      if (Settings?.Count > 0)
+      {
+        Group.SettingsList = Settings.ToArray();
+        Settings.RemoveRange(0, Settings.Count - 1);
+      }
+      GroupList.Add(group);
+      Group = group;
+      return this;
+    }
+
+    /// <summary>
+    /// Set a source mod for your settings. Information from the manifest / info will be displayed when selecting the
+    /// mod in the menu dropdown. If you don't set Mod name and Mod description separately, the information from the
+    /// manifest / info will be used instead. Providing the source mod is necessary if you want to allow disabling from
+    /// the ModMenu.
+    /// </summary>
+    /// 
+    /// <param name="modEntry">Your mod</param>
+    /// <param name="CausesSaveDependency">by default the mod is marked as creating save dependency and causing save files to break if the mod is disabled
+    /// set this parameter to true if you are sure this will not happen. It will be checked when sorting mods by <see cref="NewTypes.ModRecording.SaveInfoWithModList.ModRecord"/>
+    /// to display in a separate category on the save-load screen for user's convinience. 
+    /// </param>
+    /// <param name="allowDisabling">Set to true if you want to create a button to disable it</param>
+    public SettingsBuilder SetMod(OwlcatModification modEntry, bool CausesSaveDependency = true, bool allowDisabling = false)
+    {
+      Mod = modEntry;
+      AllowDisabling = allowDisabling;
+      DoesNotCauseSaveDependency = !CausesSaveDependency;
+      return this;
+    }
+
+    /// <summary>
+    /// Set a source mod for your settings. Information from the manifest / info will be displayed when selecting the
+    /// mod in the menu dropdown. If you don't set Mod name and Mod description separately, the information from the
+    /// manifest / info will be used instead. Providing the source mod is necessary if you want to allow disabling from
+    /// the ModMenu.
+    /// </summary>
+    /// 
+    /// <param name="modEntry">Your mod</param>
+    /// <param name="CausesSaveDependency">by default the mod is marked as creating save dependency and causing save files to break if the mod is disabled
+    /// set this parameter to true if you are sure this will not happen. It will be checked when sorting mods by <see cref="NewTypes.ModRecording.SaveInfoWithModList.ModRecord"/>
+    /// to display in a separate category on the save-load screen for user's convinience. 
+    /// </param>
+    /// <param name="allowDisabling">Set to true if you want to create a button to disable it</param>
+    public SettingsBuilder SetMod(UnityModManager.ModEntry modEntry, bool CausesSaveDependency = true, bool allowDisabling = false)
+    {
+      Mod = modEntry;
+      AllowDisabling = allowDisabling;
+      DoesNotCauseSaveDependency = !CausesSaveDependency;
+      return this;
+    }
+
+    /// <summary>
+    /// If you are sure that your mod does not cause any sort of save dependency and save files won't get broken after disabling the mod,
+    /// use this method to mark your mod. It will be checked when sorting mods by <see cref="NewTypes.ModRecording.SaveInfoWithModList.ModRecord"/>
+    /// to display in a separate category for user's convinience. 
+    /// USE THIS METHOD ONLY IF YOU DONT USE <see cref="SetMod(OwlcatModification, bool, bool)"/> or <see cref="SetMod(UnityModManager.ModEntry, bool, bool)"/>
+    /// </summary>
+    /// <param name="uniqueName">Unique name of your mod from <see cref="OwlcatModification.Manifest"/> or <see cref="UnityModManager.ModInfo"/></param>
+    public SettingsBuilder SetIsNotCausingSaveDependency(string uniqueName)
+    {
+      if (uniqueName.IsNullOrEmpty())
+      {
+        DoesNotCauseSaveDependency = true;
+        UniqueName = uniqueName;
+      }
+      return this;
+    }
+
+    /// <summary>
+    /// The name of your mod to be displayed in the ModMenu dropdown.
+    /// </summary>
+    /// <param name="name">A Localized string containing the mod name.</param>
+    public SettingsBuilder SetModName(LocalizedString name)
+    {
+      ModName = name;
+      return this;
+    }
+
+    /// <summary>
+    /// Sets the description for your mod which will be visible when hovering the mouse over the mod entry in the ModMenu dropdown.
+    /// </summary>
+    /// <param name="description">A Localized string containing the description.</param>
+    public SettingsBuilder SetModDescription(LocalizedString description)
+    {
+      ModDescription = description;
+      return this;
     }
 
     /// <summary>
@@ -109,6 +234,47 @@ namespace ModMenu.Settings
     }
 
     /// <summary>
+    /// Adds mod's version to the mod description shown when you hover the mouse over the mod entry in the ModMenu dropdown
+    /// </summary>
+    /// 
+    /// <remarks>
+    /// Will be displayed only if you at least provided a Localized mod name with <see cref="SettingsBuilder.SetModName(LocalizedString)"/>. 
+    /// Mod version from the source mod info (if set with <see cref="SettingsBuilder.SetMod(UnityModManagerNet.UnityModManager.ModEntry, bool)"/>
+    /// or with <see cref="SettingsBuilder.SetMod(OwlcatModification, bool)"/>) will have higher precedence</remarks>
+    public SettingsBuilder SetModVersion(string version)
+    {
+      Version = version;
+      return this;
+    }
+
+    /// <summary>
+    /// Adds author's name mod description shown when you hover the mouse over the mod entry in the ModMenu dropdown
+    /// </summary>
+    /// 
+    /// <remarks> Will be displayed only if you at least provided a Localized mod name with <see cref="SettingsBuilder.SetModName(LocalizedString)"/>. 
+    /// Author's name from the source mod info (if set with <see cref="SettingsBuilder.SetMod(UnityModManagerNet.UnityModManager.ModEntry, bool)"/>
+    /// or with <see cref="SettingsBuilder.SetMod(OwlcatModification, bool)"/>) will have higher precedence.</remarks>
+    public SettingsBuilder SetModAuthor(string author)
+    {
+      Author = author;
+      return this;
+    }
+
+    /// <summary>
+    /// Adds an image to the mod description shown when you hover the mouse over the mod entry in the ModMenu dropdown
+    /// </summary>
+    /// 
+    /// <remarks>
+    /// Will be displayed only if you have a source mod info (if set with <see cref="SettingsBuilder.SetMod(UnityModManagerNet.UnityModManager.ModEntry, bool)"/>
+    /// or with <see cref="SettingsBuilder.SetMod(OwlcatModification, bool)"/>) or at least provided a Localized mod name with <see cref="SettingsBuilder.SetModName(LocalizedString)"/>.
+    /// </remarks>
+    public SettingsBuilder SetModIllustration(Sprite image)
+    {
+      modIllustration = image;
+      return this;
+    }
+
+    /// <summary>
     /// Adds a row containing an image. There is no setting tied to this, it is just for decoration.
     /// </summary>
     /// 
@@ -118,6 +284,7 @@ namespace ModMenu.Settings
     /// Sets the row height. Keep in mind the scaling is relative to resolution; a standard row has a height of 40. The
     /// image width will be scaled to preserve the aspect ratio.
     /// </param>
+    [Obsolete("Why would you ever use it? If you need an image for the mod, can set an illustration.")]
     public SettingsBuilder AddImage(Sprite sprite, int height)
     {
       return AddImageInternal(sprite, height);
@@ -153,6 +320,7 @@ namespace ModMenu.Settings
     /// <remarks>Added in v1.1.0</remarks>
     /// 
     /// <param name="onDefaultsApplied">Invoked after default settings are applied.</param>
+    [Obsolete("There is no need to add Default button anymore, because the vanialla Default button at the bottom of the screen affects only the selected mod")]
     public SettingsBuilder AddDefaultButton(Action onDefaultsApplied = null)
     {
       // Make sure OnDefaultsApplied is not null or the dialog doesn't close
@@ -281,10 +449,21 @@ namespace ModMenu.Settings
       return this;
     }
 
-    internal (UISettingsGroup group, Dictionary<string, ISettingsEntity> settings) Build()
+    internal (List<UISettingsGroup> groups, Dictionary<string, ISettingsEntity> settings, Info info) Build()
     {
       Group.SettingsList = Settings.ToArray();
-      return (Group, SettingsEntities);
+      Info Info;
+      if (Mod is OwlcatModification OwlMod)
+        Info = new(OwlMod, AllowDisabling, ModName, ModDescription, modIllustration, DoesNotCauseSaveDependency);
+      else if (Mod is UnityModManager.ModEntry UMMmod)
+        Info = new(UMMmod, AllowDisabling, ModName, ModDescription, modIllustration, DoesNotCauseSaveDependency);
+      else if (ModName is not null)
+        Info = new(ModName, ModDescription, Version, Author, modIllustration, new(DoesNotCauseSaveDependency, UniqueName));
+      else if (GroupList.ElementAt(0)?.Title is LocalizedString localizedName)
+        Info = new(localizedName, ModDescription, Version, Author, modIllustration, new(DoesNotCauseSaveDependency, UniqueName));
+      else
+        Info = new("", ModDescription, Version, Author, modIllustration, new(DoesNotCauseSaveDependency, UniqueName));
+      return (GroupList, SettingsEntities, Info);
     }
 
     private void OpenDefaultSettingsDialog()
@@ -293,19 +472,19 @@ namespace ModMenu.Settings
         string.Format(
           Game.Instance.BlueprintRoot.LocalizedTexts.UserInterfacesText.SettingsUI.RestoreAllDefaultsMessage,
           Group.Title);
-      EventBus.RaiseEvent(delegate (IMessageModalUIHandler w)
+      EventBus.RaiseEvent(delegate (IDialogMessageBoxUIHandler w)
       {
         w.HandleOpen(
           text,
-          MessageModalBase.ModalType.Dialog,
-          new Action<MessageModalBase.ButtonType>(OnDefaultDialogAnswer));
+          DialogMessageBoxBase.BoxType.Dialog,
+          OnDefaultDialogAnswer);
       },
       true);
     }
 
-    public void OnDefaultDialogAnswer(MessageModalBase.ButtonType buttonType)
+    public void OnDefaultDialogAnswer(DialogMessageBoxBase.BoxButton buttonType)
     {
-      if (buttonType != MessageModalBase.ButtonType.Yes)
+      if (buttonType != DialogMessageBoxBase.BoxButton.Yes)
         return;
 
       foreach (var setting in SettingsEntities.Values)
@@ -319,8 +498,11 @@ namespace ModMenu.Settings
       return
         Helpers.CreateString(
           $"mod-menu.default-description.{Group.name}",
-          $"Restore all settings in {Group.Title} to their defaults",
-          ruRU: $"Вернуть все настройки в группе {Group.Title} к значениям по умолчанию");
+          enGB: $"Restore all settings in {Group.Title.Text} to their defaults",
+          ruRU: $"Вернуть все настройки в группе {Group.Title.Text} к значениям по умолчанию",
+          zhCN: $"还原所有{Group.Title.Text}中的设置到默认值",
+          deDE: $"Setze alle Einstellungen in {Group.Title.Text} auf ihre Standardwerte zurück",
+          frFR: "Rétablir les valeurs par défaut de tous les paramètres sous {Group.Title}");
     }
 
     private LocalizedString DefaultDescriptionLong()
@@ -328,13 +510,20 @@ namespace ModMenu.Settings
       return
         Helpers.CreateString(
           $"mod-menu.default-description-long.{Group.name}",
-          $"Sets each settings under {Group.Title} to its default value. Your current settings will be lost."
+          enGB: $"Sets each settings under {Group.Title.Text} to its default value. Your current settings will be lost."
           + $" Settings in other groups are not affected. Keep in mind this will apply to sub-groups under"
-          + $" {Group.Title} as well (anything that is hidden when the group is collapsed).",
-          ruRU: $"При нажатии на кнопку все настройки в группе {Group.Title} примут значения по умолчанию." +
+          + $" {Group.Title.Text} as well (anything that is hidden when the group is collapsed).",
+          ruRU: $"При нажатии на кнопку все настройки в группе {Group.Title.Text} примут значения по умолчанию." +
           $" Ваши текущие настройки будут потеряны. Настройки из других групп затронуты не будут. Обратите внимание," +
-          $" что изменения коснутся в том числе настроек из подгрупп, вложенных в {Group.Title}" +
-          $"  (т.е. все те настройки, которые оказываются скрыты, когда вы сворачиваете группу).");
+          $" что изменения коснутся в том числе настроек из подгрупп, вложенных в {Group.Title.Text}" +
+          $"  (т.е. все те настройки, которые оказываются скрыты, когда вы сворачиваете группу).",
+          zhCN: $"{Group.Title.Text}之中每一项设置的值都会变成各自的默认值。你的当前设置会丢失。其它分组的设置不受影响。" +
+          $"注意这也会影响{Group.Title.Text}内部的小分组（只要是折叠之后看不见的都会影响.",
+          deDE: "Setzt alle Einstellungen unter {Group.Title} auf ihre Standardwerte zurück. Die aktuellen Einstellungen gehen dabei verloren. " +
+          "Einstellungen in anderen Gruppen werden nicht beeinflusst. Beachte, dass dies auch die Untergruppen von {Group.Title} betrifft.",
+          frFR: "Rétablit la valeur par défaut pour tous les paramètres sous {Group.Title}. Vos paramètres actuels vont être perdus. " +
+          "Les paramètres des autres sections ne seront pas affectés. Gardez en tête que cela va s'appliquer aussi aux sous-sections de {Group.Title} " +
+          "(tout ce qui est caché quand la section est réduite)");
     }
 
     private static LocalizedString _defaultButtonLabel;
@@ -343,7 +532,7 @@ namespace ModMenu.Settings
       get
       {
         _defaultButtonLabel ??= Helpers.CreateString(
-          "mod-menu.default-button-label", "Default", ruRU: "По умолчанию");
+          "mod-menu.default-button-label", "Default", ruRU: "По умолчанию", zhCN: "默认值", deDE: "Standard", frFR: "Défaut");
         return _defaultButtonLabel;
       }
     }
@@ -448,6 +637,7 @@ namespace ModMenu.Settings
 
     protected readonly string Key;
     protected readonly T DefaultValue;
+
     /// <summary>
     /// Currently this is unused but I might add some kind of special handling later so the code is here.
     /// </summary>
@@ -547,13 +737,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityBool CreateEntity()
     {
-      return new SettingsEntityBool(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityBool(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityBool CreateUIEntity()
     {
       var uiEntity = ScriptableObject.CreateInstance<UISettingsEntityBool>();
       uiEntity.DefaultValue = DefaultValue;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 
@@ -572,12 +763,13 @@ namespace ModMenu.Settings
     public static Dropdown<T> New(
       string key, T defaultValue, LocalizedString description, UISettingsEntityDropdownEnum<T> dropdown)
     {
+      dropdown.m_EncyclopediaDescription ??= new();
       return new(key, defaultValue, description, dropdown);
     }
 
     protected override SettingsEntityEnum<T> CreateEntity()
     {
-      return new SettingsEntityEnum<T>(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityEnum<T>(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownEnum<T> CreateUIEntity()
@@ -637,13 +829,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownInt CreateUIEntity()
     {
       var dropdown = ScriptableObject.CreateInstance<UISettingsEntityDropdownInt>();
-      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.ToString()).ToList();
+      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.Text).ToList();
+      dropdown.m_EncyclopediaDescription = new();
       return dropdown;
     }
 
@@ -656,6 +849,7 @@ namespace ModMenu.Settings
       : base(key, defaultSelected, description)
     {
       DropdownValues = values;
+      
     }
   }
 
@@ -680,13 +874,14 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntityDropdownButton CreateUIEntity()
     {
       var dropdown = UISettingsEntityDropdownButton.Create(Description, LongDescription, ButtonText, OnClick);
-      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.ToString()).ToList();
+      dropdown.m_LocalizedValues = DropdownValues.Select(value => value.Text).ToList();
+      dropdown.m_EncyclopediaDescription = new();
       return dropdown;
     }
 
@@ -755,7 +950,7 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityFloat CreateEntity()
     {
-      return new SettingsEntityFloat(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityFloat(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntitySliderFloat CreateUIEntity()
@@ -766,6 +961,7 @@ namespace ModMenu.Settings
       uiEntity.m_Step = Step;
       uiEntity.m_DecimalPlaces = DecimalPlaces;
       uiEntity.m_ShowValueText = ShowValueText;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 
@@ -823,7 +1019,7 @@ namespace ModMenu.Settings
 
     protected override SettingsEntityInt CreateEntity()
     {
-      return new SettingsEntityInt(Key, DefaultValue, SaveDependent, RebootRequired);
+      return new SettingsEntityInt(SettingsController.Instance, Key, DefaultValue, SaveDependent, RebootRequired);
     }
 
     protected override UISettingsEntitySliderInt CreateUIEntity()
@@ -832,6 +1028,7 @@ namespace ModMenu.Settings
       uiEntity.m_MinValue = MinValue;
       uiEntity.m_MaxValue = MaxValue;
       uiEntity.m_ShowValueText = ShowValueText;
+      uiEntity.m_EncyclopediaDescription = new();
       return uiEntity;
     }
 

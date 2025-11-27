@@ -1,8 +1,9 @@
-﻿using Kingmaker.UI.SettingsUI;
+﻿using Kingmaker.UI.Models.SettingsUI;
 using Owlcat.Runtime.UI.MVVM;
 using Owlcat.Runtime.UI.VirtualListSystem.ElementSettings;
 using UnityEngine;
 using UnityEngine.UI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 
 namespace ModMenu.NewTypes
 {
@@ -18,6 +19,7 @@ namespace ModMenu.NewTypes
       image.Sprite = sprite;
       image.Height = height;
       image.ImageScale = imageScale;
+      image.m_EncyclopediaDescription = new();
       return image;
     }
 
@@ -37,7 +39,7 @@ namespace ModMenu.NewTypes
       ImageScale = imageEntity.ImageScale;
     }
 
-    protected override void DisposeImplementation() { }
+    public override void DisposeImplementation() { }
   }
 
   internal class SettingsEntityImageView : VirtualListElementViewBase<SettingsEntityImageVM>
@@ -81,7 +83,7 @@ namespace ModMenu.NewTypes
     public Image Icon;
     public GameObject TopBorder;
 
-    protected override void BindViewImplementation()
+    public override void BindViewImplementation()
     {
       Icon.sprite = ViewModel.Sprite;
 
@@ -114,7 +116,7 @@ namespace ModMenu.NewTypes
       SetHeight(height);
     }
 
-    protected override void DestroyViewImplementation() { }
+    public override void DestroyViewImplementation() { }
   }
 }
 

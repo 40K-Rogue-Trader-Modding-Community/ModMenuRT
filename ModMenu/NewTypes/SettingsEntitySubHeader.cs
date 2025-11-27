@@ -1,5 +1,6 @@
 ﻿using Kingmaker.Localization;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 using Owlcat.Runtime.UI.VirtualListSystem.ElementSettings;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace ModMenu.NewTypes
       var subHeader = ScriptableObject.CreateInstance<UISettingsEntitySubHeader>();
       subHeader.Title = title;
       subHeader.Expanded = expanded;
+      subHeader.m_EncyclopediaDescription = new();
       return subHeader;
     }
 
@@ -51,7 +53,7 @@ namespace ModMenu.NewTypes
     }
     private VirtualListLayoutElementSettings m_LayoutSettings;
 
-    protected override int GetFontSize()
+    public override int GetFontSize()
     {
       return 110;
     }

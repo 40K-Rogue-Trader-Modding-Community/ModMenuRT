@@ -1,8 +1,8 @@
 ﻿using Kingmaker.PubSubSystem;
+using Kingmaker.PubSubSystem.Core;
 using Kingmaker;
 using UnityEngine;
 using Kingmaker.Utility;
-using HarmonyLib;
 using Kingmaker.Blueprints.JsonSystem;
 
 namespace ModMenu.Settings

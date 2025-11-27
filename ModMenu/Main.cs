@@ -1,27 +1,29 @@
-﻿using HarmonyLib;
-using Kingmaker.Blueprints.JsonSystem;
+﻿using Kingmaker.Blueprints.JsonSystem;
 using ModMenu.Settings;
-using System;
 using static UnityModManagerNet.UnityModManager;
 using static UnityModManagerNet.UnityModManager.ModEntry;
 
 namespace ModMenu
 {
-  public static class Main
+  internal static class Main
   {
     internal static ModLogger Logger;
-    private static Harmony Harmony;
+    internal static ModEntry Entry;
+    internal static Harmony Harmony;
 
     public static bool Load(ModEntry modEntry)
     {
       try
       {
+        Entry = modEntry;
         Logger = modEntry.Logger;
         modEntry.OnUnload = OnUnload;
 
         Harmony = new(modEntry.Info.Id);
+#if DEBUG
+        Harmony.DEBUG = true; 
+#endif
         Harmony.PatchAll();
-
         Logger.Log("Finished loading.");
       }
       catch (Exception e)
@@ -35,7 +37,7 @@ namespace ModMenu
     private static bool OnUnload(ModEntry modEntry)
     {
       Logger.Log("Unloading.");
-      Harmony?.UnpatchAll();
+      Harmony?.UnpatchAll(Harmony.Id);
       return true;
     }
 

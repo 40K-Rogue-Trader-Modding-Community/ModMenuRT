@@ -1,15 +1,16 @@
 ﻿using Kingmaker.Localization;
 using Kingmaker.PubSubSystem;
-using Kingmaker.UI.MVVM._PCView.Settings.Entities;
-using Kingmaker.UI.MVVM._VM.Settings.Entities;
-using Kingmaker.UI.SettingsUI;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
+using Kingmaker.UI.Models.SettingsUI;
 using Owlcat.Runtime.UI.Controls.Button;
 using Owlcat.Runtime.UI.VirtualListSystem.ElementSettings;
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
 
 namespace ModMenu.NewTypes
 {
@@ -27,6 +28,7 @@ namespace ModMenu.NewTypes
 
       button.ButtonText = buttonText;
       button.OnClick = onClick;
+      button.m_EncyclopediaDescription = new();
       return button;
     }
 
@@ -90,7 +92,7 @@ namespace ModMenu.NewTypes
     // These must be public or they'll be null
     public Image HighlightedImage;
     public TextMeshProUGUI Title;
-    public OwlcatButton Button;
+    public OwlcatMultiButton Button;
     public TextMeshProUGUI ButtonLabel;
 
     private void SetupColor(bool isHighlighted)
@@ -105,7 +107,7 @@ namespace ModMenu.NewTypes
     {
       EventBus.RaiseEvent(delegate (ISettingsDescriptionUIHandler h)
       {
-        h.HandleShowSettingsDescription(ViewModel.Title, ViewModel.Description);
+        h.HandleShowSettingsDescription(ViewModel.UISettingsEntity, ViewModel.Title, ViewModel.Description);
       },
       true);
       SetupColor(isHighlighted: true);

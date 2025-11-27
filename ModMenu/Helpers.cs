@@ -1,15 +1,28 @@
-﻿using HarmonyLib;
-using Kingmaker;
+﻿using Kingmaker;
 using Kingmaker.Localization;
 using Kingmaker.Localization.Shared;
-using Kingmaker.UI.MVVM._PCView.Settings.Entities;
-using Kingmaker.UI.MVVM._PCView.Settings;
-using Kingmaker.UI.MVVM._VM.Settings.Entities;
-using System;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using Kingmaker.Utility;
+using Kingmaker.Code.UI.MVVM.VM.Settings;
+using UniRx;
+using Kingmaker.UI.Common;
+using static UnityModManagerNet.UnityModManager;
+using UnityEngine.UI;
+using Kingmaker.Localization.Enums;
+using Newtonsoft.Json.Utilities;
+using Kingmaker.Utility.UnityExtensions;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
+using Kingmaker.PubSubSystem.Core.Interfaces;
+using Kingmaker.PubSubSystem.Core;
+using Kingmaker.PubSubSystem;
+using Kingmaker.Code.UI.MVVM.View.Common.PC;
+using Rewired.Utils.Classes.Data;
 
 namespace ModMenu
 {
@@ -19,15 +32,21 @@ namespace ModMenu
   internal static class Helpers
   {
     private static readonly List<LocalString> Strings = new();
+    internal static LocalizedString EmptyString = CreateString("", "");
 
-    internal static LocalizedString CreateString(string key, string enGB, string ruRU = "")
+    internal static LocalizedString CreateString(string key, string enGB, string ruRU = null, string zhCN = null, string deDE = null, string frFR = null)
     {
-      var localString = new LocalString(key, enGB, ruRU);
+      var localString = new LocalString(key, enGB, ruRU, zhCN, deDE, frFR);
       Strings.Add(localString);
-      localString.Register();
+
       return localString.LocalizedString;
     }
 
+    static readonly Func<Texture2D, byte[], bool> ActionLoadImage = AccessTools.MethodDelegate<Func<Texture2D, byte[], bool>>(AccessTools.DeclaredMethod(AccessTools.TypeByName("ImageConversion"), "LoadImage", [typeof(Texture2D), typeof(byte[])]));
+    public static bool LoadImage (this Texture2D tex, byte[] bytes)
+    {
+      return ActionLoadImage(tex, bytes);
+    }
     internal static Sprite CreateSprite(string embeddedImage)
     {
       var assembly = Assembly.GetExecutingAssembly();
@@ -36,7 +55,10 @@ namespace ModMenu
       stream.Read(bytes, 0, bytes.Length);
       var texture = new Texture2D(128, 128, TextureFormat.RGBA32, false);
       _ = texture.LoadImage(bytes);
-      var sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero);
+      texture.name = embeddedImage + ".texture";
+      //the default value for PixelsPerUnit is 1, meaning that Sprite's Prefered size becomes 100 times more. So must be set to 100% manually
+      var sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 100);
+      sprite.name = embeddedImage + ".sprite";
       return sprite;
     }
 
@@ -45,25 +67,52 @@ namespace ModMenu
       public readonly LocalizedString LocalizedString;
       private readonly string enGB;
       private readonly string ruRU;
+      private readonly string zhCN;
+      private readonly string deDE;
+      private readonly string frFR;
+      const string NullString = "<null>";
 
-      public LocalString(string key, string enGB, string ruRU)
+      static LocalString()
+      {
+        ((ILocalizationProvider)LocalizationManager.Instance).LocaleChanged += new((Locale _) 
+          => { foreach (var locStr in Strings) locStr.Register(); });
+      }
+
+      public LocalString(string key, string enGB, string ruRU, string zhCN, string deDE, string frFR)
       {
         LocalizedString = new LocalizedString() { m_Key = key };
         this.enGB = enGB;
         this.ruRU = ruRU;
+        this.zhCN = zhCN;
+        this.deDE = deDE;
+        this.frFR = frFR;
+        if (LocalizationManager.Instance.CurrentPack != null)
+          Register();
       }
 
       public void Register()
       {
-        var localized = enGB;
-        switch (LocalizationManager.CurrentPack.Locale)
+        string localized;
+        if (LocalizationManager.Instance.CurrentPack.Locale is Locale.enGB)
         {
-          case Locale.ruRU:
-            if (!string.IsNullOrEmpty(ruRU))
-              localized = ruRU;
-            break;
+          localized = enGB;
+          goto putString;
         }
-        LocalizationManager.CurrentPack.PutString(LocalizedString.m_Key, localized);
+
+        localized = LocalizationManager.Instance.CurrentPack.Locale switch
+        {
+          Locale.ruRU => ruRU,
+          Locale.zhCN => zhCN,
+          Locale.deDE => deDE,
+          Locale.frFR => frFR,
+          _ => enGB
+        };
+
+        if (localized.IsNullOrEmpty() || localized == NullString)
+          localized = enGB;
+
+        ;putString:
+        LocalizationManager.Instance.CurrentPack.PutString(LocalizedString.m_Key, localized);
       }
     }
 
@@ -78,59 +127,22 @@ namespace ModMenu
     public class SettingsDescriptionUpdater<T>
         where T : SettingsEntityWithValueVM
     {
-      private readonly string pathMainUi;
-      private readonly string pathDescriptionUi;
-
-      private Transform mainUI;
       private Transform settingsUI;
-      private Transform descriptionUI;
 
       private List<SettingsEntityWithValueView<T>> settingViews;
-      private SettingsDescriptionPCView descriptionView;
 
-      /// <summary>
-      /// Expected path as of 2.1.5r
-      /// </summary>
-      public const string PATH_MAIN_UI = "Canvas/SettingsView/ContentWrapper/VirtualListVertical/Viewport/Content";
-
-      /// <summary>
-      /// Expected path as of 2.1.5r
-      /// </summary>
-      public const string PATH_DESCRIPTION_UI = "Canvas/SettingsView/ContentWrapper/DescriptionView";
-
-      /// <summary>
-      /// Constuctor for SettingsDescriptionUpdater. Sets up the paths for where the UI gameobjects at located
-      /// </summary>
-      /// <param name="pathMainUI">
-      /// Optional. This is the path to main UI where setting GameOjects are located are located.
-      /// Defaults to PATH_MAIN_UI which should work in 2.1.5r.
-      /// </param>
-      /// <param name="pathDesriptionUI">
-      /// This is the path to the Description UI where the Description GameOject SettingsDescriptionPCView is located.
-      /// Defaults to PATH_DESCRIPTION_UI which should work in 2.1.5r.
-      /// </param>
-      public SettingsDescriptionUpdater(string pathMainUI = PATH_MAIN_UI, string pathDesriptionUI = PATH_DESCRIPTION_UI)
-      {
-        pathMainUi = pathMainUI;
-        pathDescriptionUi = pathDesriptionUI;
-      }
 
       private bool Ensure()
       {
         // UI tends to change frequently, ensure that eveything is up to date.
 
-        if ((mainUI = Game.Instance.RootUiContext.m_CommonView.transform) == null)
-          return false;
-
-        settingsUI = mainUI.Find(pathMainUi);
-        descriptionUI = mainUI.Find(pathDescriptionUi);
-        if (settingsUI == null || descriptionUI == null)
+        settingsUI = (Game.Instance.RootUiContext.m_CommonView as CommonPCView)?.m_SettingsPCView.View.transform ;
+        if (settingsUI == null)
           return false;
 
         settingViews = settingsUI.gameObject.GetComponentsInChildren<SettingsEntityWithValueView<T>>().ToList();
-        descriptionView = descriptionUI.GetComponent<SettingsDescriptionPCView>();
 
-        if (settingViews == null || descriptionView == null || settingViews.Count == 0)
+        if (settingViews == null || settingViews.Count == 0)
           return false;
 
         return true;
@@ -159,7 +171,7 @@ namespace ModMenu
         foreach (var settingView in settingViews)
         {
           var test = (T)settingView.GetViewModel();
-          if (test.Title.Equals(title))
+          if (test.Title.Text.Equals(title))
           {
             svm = test;
               break;
@@ -171,28 +183,11 @@ namespace ModMenu
 
         svm.GetType().GetField("Description").SetValue(svm, description);
 
-        descriptionView.m_DescriptionText.text = description;
+        EventBus.RaiseEvent<ISettingsDescriptionUIHandler>(handler => handler.HandleShowSettingsDescription(svm.UISettingsEntity, null, description));
 
         return true;
       }
     }
 
-
-    [HarmonyPatch(typeof(LocalizationManager))]
-    static class LocalizationManager_Patch
-    {
-      [HarmonyPatch(nameof(LocalizationManager.OnLocaleChanged)), HarmonyPostfix]
-      static void Postfix()
-      {
-        try
-        {
-          Strings.ForEach(str => str.Register());
-        }
-        catch (Exception e)
-        {
-          Main.Logger.LogException("Failed to handle locale change.", e);
-        }
-      }
-    }
   }
 }
