@@ -9,7 +9,7 @@ namespace ModMenu.NewTypes
 {
   internal class UISettingsEntityImage : UISettingsEntityBase
   {
-    internal Sprite Sprite;
+    internal Sprite? Sprite;
     internal int Height;
     internal float ImageScale;
 
@@ -28,15 +28,15 @@ namespace ModMenu.NewTypes
 
   internal class SettingsEntityImageVM : VirtualListElementVMBase
   {
-    internal Sprite Sprite;
+    internal Sprite? Sprite;
     internal int Height;
     internal float ImageScale;
 
     internal SettingsEntityImageVM(UISettingsEntityImage imageEntity)
     {
-      Sprite = imageEntity.Sprite;
-      Height = imageEntity.Height;
-      ImageScale = imageEntity.ImageScale;
+      Sprite = imageEntity?.Sprite;
+      Height = imageEntity?.Height ?? default;
+      ImageScale = imageEntity?.ImageScale ?? default;
     }
 
     public override void DisposeImplementation() { }
@@ -78,14 +78,17 @@ namespace ModMenu.NewTypes
         m_LayoutSettings, VirtualListLayoutElementSettings.LayoutOverrideType.Custom);
     }
 
-    private VirtualListLayoutElementSettings m_LayoutSettings;
+    private VirtualListLayoutElementSettings? m_LayoutSettings;
 
-    public Image Icon;
-    public GameObject TopBorder;
+    public Image Icon = null!;
+    public GameObject TopBorder = null!;
 
     public override void BindViewImplementation()
     {
       Icon.sprite = ViewModel.Sprite;
+
+      if (Icon.sprite == null)
+        return;
 
       var spriteHeight = Icon.sprite.bounds.size.y * Icon.sprite.pixelsPerUnit;
 

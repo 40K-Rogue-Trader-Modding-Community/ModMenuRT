@@ -4,9 +4,6 @@ using Kingmaker.Localization.Shared;
 using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
 using Kingmaker.Code.UI.MVVM.View.Settings.PC;
 using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using Kingmaker.Utility;
 using Kingmaker.Code.UI.MVVM.VM.Settings;
@@ -22,19 +19,18 @@ using Kingmaker.PubSubSystem.Core.Interfaces;
 using Kingmaker.PubSubSystem.Core;
 using Kingmaker.PubSubSystem;
 using Kingmaker.Code.UI.MVVM.View.Common.PC;
-using Rewired.Utils.Classes.Data;
 
 namespace ModMenu
 {
   /// <summary>
   /// Generic utils for simple operations.
   /// </summary>
-  internal static class Helpers
+  public static class Helpers
   {
     private static readonly List<LocalString> Strings = new();
     internal static LocalizedString EmptyString = CreateString("", "");
 
-    internal static LocalizedString CreateString(string key, string enGB, string ruRU = null, string zhCN = null, string deDE = null, string frFR = null)
+    public static LocalizedString CreateString(string key, string enGB, string ruRU = null, string zhCN = null, string deDE = null, string frFR = null)
     {
       var localString = new LocalString(key, enGB, ruRU, zhCN, deDE, frFR);
       Strings.Add(localString);
@@ -42,11 +38,6 @@ namespace ModMenu
       return localString.LocalizedString;
     }
 
-    static readonly Func<Texture2D, byte[], bool> ActionLoadImage = AccessTools.MethodDelegate<Func<Texture2D, byte[], bool>>(AccessTools.DeclaredMethod(AccessTools.TypeByName("ImageConversion"), "LoadImage", [typeof(Texture2D), typeof(byte[])]));
-    public static bool LoadImage (this Texture2D tex, byte[] bytes)
-    {
-      return ActionLoadImage(tex, bytes);
-    }
     internal static Sprite CreateSprite(string embeddedImage)
     {
       var assembly = Assembly.GetExecutingAssembly();
@@ -127,9 +118,9 @@ namespace ModMenu
     public class SettingsDescriptionUpdater<T>
         where T : SettingsEntityWithValueVM
     {
-      private Transform settingsUI;
+      private Transform? settingsUI;
 
-      private List<SettingsEntityWithValueView<T>> settingViews;
+      private List<SettingsEntityWithValueView<T>>? settingViews;
 
 
       private bool Ensure()
@@ -166,9 +157,9 @@ namespace ModMenu
       {
         if (!Ensure()) return false;
 
-        T svm = null;
+        T? svm = null;
 
-        foreach (var settingView in settingViews)
+        foreach (var settingView in settingViews ?? [])
         {
           var test = (T)settingView.GetViewModel();
           if (test.Title.Text.Equals(title))

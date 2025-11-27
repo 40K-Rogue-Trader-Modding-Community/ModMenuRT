@@ -8,7 +8,7 @@ namespace ModMenu.NewTypes
 {
   internal class UISettingsEntitySubHeader : UISettingsEntityBase
   {
-    internal LocalizedString Title;
+    internal LocalizedString? Title;
     internal bool Expanded;
 
     internal static UISettingsEntitySubHeader Create(LocalizedString title, bool expanded)
@@ -51,7 +51,7 @@ namespace ModMenu.NewTypes
         return m_LayoutSettings;
       }
     }
-    private VirtualListLayoutElementSettings m_LayoutSettings;
+    private VirtualListLayoutElementSettings? m_LayoutSettings;
 
     public override int GetFontSize()
     {

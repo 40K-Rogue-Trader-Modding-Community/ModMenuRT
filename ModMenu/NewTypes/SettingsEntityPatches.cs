@@ -31,7 +31,6 @@ using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 using Kingmaker.Code.UI.MVVM;
 using static UnityModManagerNet.UnityModManager;
 using Kingmaker.Utility.DotNetExtensions;
-using System.Security.Policy;
 using UniRx;
 
 namespace ModMenu.NewTypes
@@ -47,26 +46,25 @@ namespace ModMenu.NewTypes
     [HarmonyPatch]
     static class DictionarySettingsProviderPatcher
       {
-      [HarmonyTargetMethod]
-      static MethodInfo TargetMethod()
-      {
-        return typeof(DictionarySettingsProvider)
-              .GetMethod(nameof(DictionarySettingsProvider.GetValue))
-              .MakeGenericMethod(typeof(ModsMenuEntry));
-      }
+        [HarmonyTargetMethod]
+        static MethodInfo TargetMethod()
+        {
+          return typeof(DictionarySettingsProvider)
+                .GetMethod(nameof(DictionarySettingsProvider.GetValue))
+                .MakeGenericMethod(typeof(ModsMenuEntry));
+        }
 
         [HarmonyPrefix]
-      public static bool DeserializeSettingEntry(string key, ref ModsMenuEntry __result)
-      {
-        Main.Logger.Log($"DeserializeSettingEntry {key}");
-        if (key.Equals(SettingsEntityModMenuEntry.instance.Key))
+        public static bool DeserializeSettingEntry(string key, ref ModsMenuEntry __result)
         {
+          if (key.Equals(SettingsEntityModMenuEntry.instance.Key))
+          {
             __result = ModsMenuEntry.EmptyInstance;
             return false;
-        }
+          }
           return true;
+        }
       }
-    }
 
 
     /// <summary>
@@ -126,30 +124,16 @@ namespace ModMenu.NewTypes
         if (settingsScreen != ModsMenuEntity.SettingsScreenId) return true;
         try
         {
-#if DEBUG
-          Main.Logger.NativeLog("Collecting setting entities.");
-#endif
-          var entities = __instance.m_SettingEntities;
-          bool alreadyHaveModMenuDropdown =
-          entities.Count > 0 && entities[0] is SettingsEntityDropdownVM dropVM && dropVM.m_UISettingsEntity == UISettingsEntityDropdownModMenuEntry.instance;
-#if DEBUG
-            Main.Logger.Log($"alreadyHaveModMenuDropdown is {alreadyHaveModMenuDropdown}");
-#endif
-          var entitiesAsIEnum = alreadyHaveModMenuDropdown ? entities.Skip(1) : entities;
-          entitiesAsIEnum.ForEach(e => e.Dispose());
-          if (alreadyHaveModMenuDropdown)
-            while (entities.Count > 1)
-              entities.RemoveLast();
-          else
-            entities.Clear();
-          if (!alreadyHaveModMenuDropdown)
-            entities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(UISettingsEntityDropdownModMenuEntry.instance)));
+        Main.Logger.NativeLog("Collecting setting entities.");
+
+        __instance.m_SettingEntities.Clear();
+        __instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(UISettingsEntityDropdownModMenuEntry.instance)));
           if (UISettingsEntityDropdownModMenuEntry.instance.Setting.GetTempValue() == ModsMenuEntry.EmptyInstance)
             return false;
-          //__instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(separator)));
+        //__instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(separator)));
 
             //Here should be a toggle for mod disabling, but do we need it?
-          SettingsEntitySubHeaderVM subheader;
+          SettingsEntitySubHeaderVM? subheader;
           foreach (var uisettingsGroup in ModsMenuEntity.CollectSettingGroups)
           {
             __instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(new SettingsEntityHeaderVM(uisettingsGroup.Title)));
@@ -292,7 +276,7 @@ namespace ModMenu.NewTypes
         }
       }
 
-      private static SettingsEntityButtonView CreateButtonTemplate(GameObject prefab, OwlcatMultiButton buttonPrefab)
+      private static SettingsEntityButtonView CreateButtonTemplate(GameObject prefab, OwlcatMultiButton? buttonPrefab)
       {
         Main.Logger.NativeLog("Creating button template.");
 
@@ -301,8 +285,8 @@ namespace ModMenu.NewTypes
         Object.DestroyImmediate(prefab.transform.Find("MultiButton").gameObject);
         Object.DontDestroyOnLoad(prefab);
 
-        OwlcatMultiButton buttonControl = null;
-        TextMeshProUGUI buttonLabel = null;
+        OwlcatMultiButton? buttonControl = null;
+        TextMeshProUGUI? buttonLabel = null;
 
         // Add in our own button
         if (buttonPrefab != null)
@@ -315,7 +299,7 @@ namespace ModMenu.NewTypes
           var layout = button.AddComponent<LayoutElement>();
           layout.ignoreLayout = true;
 
-          var rect = button.transform as RectTransform;
+          var rect = (RectTransform) button.transform;
 
           rect.anchorMin = new(1, 0.5f);
           rect.anchorMax = new(1, 0.5f);
@@ -409,7 +393,7 @@ namespace ModMenu.NewTypes
       }
 
       private static SettingsEntityDropdownButtonView CreateDropdownButtonTemplate(
-        GameObject prefab, OwlcatMultiButton buttonPrefab)
+        GameObject prefab, OwlcatMultiButton? buttonPrefab)
       {
         Main.Logger.NativeLog("Creating dropdown button template.");
 
@@ -418,9 +402,9 @@ namespace ModMenu.NewTypes
         Object.DestroyImmediate(prefab.transform.Find("SetConnectionMarkerIamSet")?.gameObject);
         Object.DontDestroyOnLoad(prefab);
 
-        OwlcatMultiButton buttonControl = null;
-        TextMeshProUGUI buttonLabel = null;
-        Image oldImage = null;
+        OwlcatMultiButton? buttonControl = null;
+        TextMeshProUGUI? buttonLabel = null;
+        Image? oldImage = null;
         // Add in our own button
         if (buttonPrefab != null)
         {
@@ -433,7 +417,7 @@ namespace ModMenu.NewTypes
 
 
 
-          oldImage = button.GetComponentInChildren<Image>();
+          oldImage = button.GetComponent<Image>();
           if (oldImage != null)
           {
             oldImage.sprite = null;
@@ -442,7 +426,7 @@ namespace ModMenu.NewTypes
           var layout = button.AddComponent<LayoutElement>();
           layout.ignoreLayout = true;
 
-          var rect = button.transform as RectTransform;
+          var rect = (RectTransform) button.transform;
 
           rect.anchorMin = new(1, 0.5f);
           rect.anchorMax = new(1, 0.5f);
@@ -466,9 +450,9 @@ namespace ModMenu.NewTypes
         templatePrefab.Title =
           prefab.transform.Find("HorizontalLayoutGroup/Text").gameObject.GetComponent<TextMeshProUGUI>();
         templatePrefab.m_Dropdown = prefab.GetComponentInChildren<OwlcatDropdown>();
-        templatePrefab.Button = buttonControl;
-        templatePrefab.ButtonLabel = buttonLabel;
-        templatePrefab.ButtonImage = oldImage;
+        templatePrefab.Button = buttonControl!;
+        templatePrefab.ButtonLabel = buttonLabel!;
+        templatePrefab.ButtonImage = oldImage!;
 
         return templatePrefab;
       }
@@ -613,7 +597,7 @@ namespace ModMenu.NewTypes
 
         return _inst;
       }
-      static LocalizedString newDefaultMessage;
+      static LocalizedString? newDefaultMessage;
       static bool CheckForSelectedSettingsScreenType() =>  RootUIContext.Instance?.CommonVM.SettingsVM.Value?.SelectedMenuEntity.Value?.SettingsScreenType == (UISettingsManager.SettingsScreen)ModsMenuEntity.SettingsScreenValue;
       
       static string MakeMeDefaultButtonMessage()

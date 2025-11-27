@@ -76,10 +76,10 @@ namespace ModMenu.Settings
   /// </remarks>
   public class SettingsBuilder
   {
-    private object Mod;
+    private object? Mod;
     private bool AllowDisabling;
     private bool DoesNotCauseSaveDependency;
-    private string UniqueName;
+    private string? UniqueName;
     private LocalizedString ModName;
     private LocalizedString ModDescription;
     private string Author = "";

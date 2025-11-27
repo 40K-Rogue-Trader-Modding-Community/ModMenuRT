@@ -93,11 +93,12 @@ namespace ModMenu.NewTypes
         return m_LayoutSettings;
       }
     }
-    private VirtualListLayoutElementSettings m_LayoutSettings;
+    private VirtualListLayoutElementSettings? m_LayoutSettings;
 
-    public TextMeshProUGUI Title;
-    public OwlcatMultiButton Button;
-    public ExpandableCollapseMultiButtonPC ButtonPC;
+    // yolo
+    public TextMeshProUGUI Title = null!;
+    public OwlcatMultiButton Button = null!;
+    public ExpandableCollapseMultiButtonPC ButtonPC = null!;
 
     public override void BindViewImplementation()
     {

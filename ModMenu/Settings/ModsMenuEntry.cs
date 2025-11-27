@@ -161,18 +161,18 @@ namespace ModMenu.Settings
       Helpers.CreateString("ModsMenu.stringVer", "Version", ruRU: "Версия", zhCN: "版本", deDE: "Version", frFR: "Version");
     private static int AnonymousCounter = 0;
 
-    public Sprite ModImage { get; private set; }
+    public Sprite? ModImage { get; private set; }
     public LocalizedString ModName { get; private set; }
     public string VersionNumber { get; private set; }
     public string AuthorName { get; private set; }
-    public LocalizedString LocalizedModDescription { get; private set; }
-    public string NonLocalizedModDescription { get; private set; }
-    private string ModDescription { get { return LocalizedModDescription.Text ?? NonLocalizedModDescription; } }
-    private string m_CachedDescription;
+    public LocalizedString? LocalizedModDescription { get; private set; }
+    public string? NonLocalizedModDescription { get; private set; }
+    private string? ModDescription { get { return LocalizedModDescription?.Text ?? NonLocalizedModDescription; } }
+    private string? m_CachedDescription;
     private Locale m_LastLocale;
     internal bool AllowModDisabling { get; set; }
-    internal OwlcatModification OwlMod { get; }
-    internal UnityModManager.ModEntry UMMMod { get; }
+    internal OwlcatModification? OwlMod { get; }
+    internal UnityModManager.ModEntry? UMMMod { get; }
 
   /// <param name="name">
   /// Name of your mod displayed in the ModMenu dropdown. If you don't provide any, it will be Anonymous
@@ -193,11 +193,11 @@ namespace ModMenu.Settings
   /// Mod will be recorded (in <see cref="NewTypes.ModRecording.SaveInfoWithModList.ModRecord"/>) as one not causing dependency for save files for user convinience
   /// </param>
   public Info(
-      LocalizedString name,
-      LocalizedString description = null,
+      LocalizedString? name,
+      LocalizedString? description = null,
       string version = "",
       string author = "",
-      Sprite image = null,
+      Sprite? image = null,
       (bool value, string UniqueName) notCauseDep = default)
     {
       if (name is null) ModName = AnonymousMod;
@@ -206,7 +206,7 @@ namespace ModMenu.Settings
       AuthorName = author;
       ModImage = image;
       LocalizedModDescription = description;
-      if (notCauseDep.value)
+      if (notCauseDep.value && notCauseDep.UniqueName is not null)
       {          
         if (!notCauseDep.UniqueName.IsNullOrEmpty() && !SaveSlotWithModListVM.NamesExclusions.Contains(notCauseDep.UniqueName))
           SaveSlotWithModListVM.NamesExclusions.Add(notCauseDep.UniqueName);
@@ -227,7 +227,7 @@ namespace ModMenu.Settings
   /// Mod will be recorded (in <see cref="NewTypes.ModRecording.SaveInfoWithModList.ModRecord"/>) as one not causing dependency for save files for user convinience
   /// </param>
   public Info(
-        string name, string description = "", string version = "", string author = "", Sprite image = null, (bool value, string UniqueName) notCauseDep = default) :
+        string name, string description = "", string version = "", string author = "", Sprite? image = null, (bool value, string UniqueName) notCauseDep = default) :
       this(Helpers.CreateString($"ModsMenu.{name}.Name", name), null, version, author, image, notCauseDep) 
     {
       if (name.IsNullOrEmpty())
@@ -260,9 +260,9 @@ namespace ModMenu.Settings
   public Info(
       OwlcatModification owlcatModification,
       bool allowModDisabling,
-      LocalizedString localizedModName = null,
-      LocalizedString localizedModDescription = null,
-      Sprite image = null,
+      LocalizedString? localizedModName = null,
+      LocalizedString? localizedModDescription = null,
+      Sprite? image = null,
       bool notCauseDep = false)
   {
     if (owlcatModification is null)
@@ -317,9 +317,9 @@ namespace ModMenu.Settings
   public Info(
     ModEntry ummMod,
     bool allowModDisabling,
-    LocalizedString localizedModName = null,
-    LocalizedString localizedModDescription = null,
-    Sprite image = null, 
+    LocalizedString? localizedModName = null,
+    LocalizedString? localizedModDescription = null,
+    Sprite? image = null, 
     bool notCauseDep = false)
   {
     if (ummMod is null)
@@ -358,7 +358,7 @@ namespace ModMenu.Settings
     ModImage = image;
   }
 
-    internal string GenerateDescription()
+    internal string? GenerateDescription()
       {
         if (!m_CachedDescription.IsNullOrEmpty() && m_LastLocale == LocalizationManager.Instance.CurrentLocale)
           return m_CachedDescription;

@@ -1,20 +1,30 @@
 ﻿using Kingmaker.Code.UI.MVVM.View.Common.Dropdown;
+using Kingmaker.Code.UI.MVVM.View.Settings.PC.Entities;
+using Kingmaker.Code.UI.MVVM.VM.Common.Dropdown;
+using Kingmaker.Code.UI.MVVM.VM.Settings;
+using Kingmaker.Code.UI.MVVM.VM.Settings.Entities;
 using Kingmaker.Code.UI.MVVM.VM.Tooltip.Bricks;
+using Kingmaker.EntitySystem.Entities.Base;
+using Kingmaker.Localization;
 using Kingmaker.PubSubSystem;
 using Kingmaker.PubSubSystem.Core;
 using Kingmaker.Settings;
+using Kingmaker.UI.Models.SettingsUI.SettingAssets;
 using Kingmaker.UI.Models.SettingsUI.SettingAssets.Dropdowns;
 using Kingmaker.UI.MVVM.VM.Tooltip.Templates;
 using Kingmaker.Utility.DotNetExtensions;
 using ModMenu.Settings;
+using Owlcat.Runtime.UI.Controls.Button;
 using Owlcat.Runtime.UI.Controls.Other;
+using Owlcat.Runtime.UI.Controls.Toggles;
 using Owlcat.Runtime.UI.Tooltips;
 using UniRx;
 using UnityEngine;
+using UnityEngine.UI;
+using static UnityModManagerNet.UnityModManager.Param;
 
 namespace ModMenu.NewTypes
 {
-  [HarmonyPatch]
   internal class UISettingsEntityDropdownModMenuEntry : UISettingsEntityDropdown<ModsMenuEntry>
   {
     static UISettingsEntityDropdownModMenuEntry()
@@ -68,27 +78,32 @@ namespace ModMenu.NewTypes
     }
   }
 
-
+  [HarmonyPatch]
   internal class SettingsModMenuDropdownItemVM : DropdownItemVM_Extended
   {
-    public SettingsModMenuDropdownItemVM(string text, ModsMenuEntry entry, Sprite icon = null) : base(text, icon)
+    public SettingsModMenuDropdownItemVM(string text, ModsMenuEntry entry, Sprite? icon = null) : base(text, icon)
     {
       Entry = entry;
     }
 
-    internal ModsMenuEntry Entry;
+    internal ModsMenuEntry? Entry;
 
     void HandleModDescription(ISettingsDescriptionUIHandler handler)
     {
       if (Entry != null)
+      {
         handler.HandleShowSettingsDescription(UISettingsEntityDropdownModMenuEntry.instance, Entry.ModInfo.ModName.Text, Entry.ModInfo.GenerateDescription());
-      Main.Logger.Log($"HandleModDescription {Entry.ModInfo.ModName.Text}");
-      
+#if DEBUG
+        Main.Logger.Log($"HandleModDescription {Entry.ModInfo.ModName.Text}");
+#endif
+      }
     }
 
     void HandleHover(bool hover)
     {
+#if DEBUG
       Main.Logger.Log($"HandleHover");
+#endif
       if (hover)
         EventBus.RaiseEvent<ISettingsDescriptionUIHandler>(HandleModDescription);
     }
@@ -98,39 +113,43 @@ namespace ModMenu.NewTypes
 
     static FieldInfo textSizeField = AccessTools.DeclaredField(typeof(TooltipBrickTitle), nameof(TooltipBrickTitle.m_AdditionalTextSize));
     static Action<TooltipBrickTitle> SetTextSize = new((brick) => textSizeField?.SetValue(brick, (int)textSizeField.GetValue(brick) +6));
-    [HarmonyPatch(typeof(TooltipTemplateSettingsEntityDescription), nameof(TooltipTemplateSettingsEntityDescription.GetHeader)), HarmonyPostfix]
-    static void AddModImageToTooltip(ref IEnumerable<ITooltipBrick> __result, TooltipTemplateSettingsEntityDescription __instance)
+
+    [HarmonyPatch(typeof(TooltipTemplateSettingsEntityDescription), nameof(TooltipTemplateSettingsEntityDescription.GetHeader))]
+    [HarmonyPostfix]
+    static IEnumerable<ITooltipBrick> AddModImageToTooltip(
+      IEnumerable<ITooltipBrick> __result,
+      TooltipTemplateSettingsEntityDescription __instance)
     {
       if (__instance.m_SettingsEntity is UISettingsEntityDropdownModMenuEntry maybeInstance && maybeInstance == UISettingsEntityDropdownModMenuEntry.instance)
       {
 #if DEBUG
-        Main.Logger.Log($"AddModImageToTooltip inserting image {__instance.m_OwnTitle}"); 
+        Main.Logger.Log($"AddModImageToTooltip inserting image {__instance.m_OwnTitle}");
 #endif
         if (ModsMenuEntity.ModEntries.TryFind((ModsMenuEntry mod) => mod?.ModInfo.ModName.Text == __instance.m_OwnTitle, out var mod) 
           && mod?.ModInfo.ModImage is Sprite image) 
         {
-
-          var list = __result.ToList();
-          var title = __result.OfType<TooltipBrickTitle>().FirstOrDefault();
+#if DEBUG
+          Main.Logger.Log($"AddModImageToTooltip Prepend");
+#endif
+          var list = __result.ToArray();
+          var title = list.OfType<TooltipBrickTitle>().FirstOrDefault();
           if (title != null)
           {
             SetField(title, __instance.m_OwnTitle);
             SetTextSize(title);
           }
-          list.Insert(1, new TooltipBrickPicture(image));
-          __result = list;
+
+          return [list[0], new TooltipBrickPicture(image), .. list.Skip(1)];
         }
       }
       else
       {
 #if DEBUG
-        if (__instance == null)
-          Main.Logger.Log($"AddModImageToTooltip returning. Instance is null o_O");
-
-        else
-          Main.Logger.Log($"AddModImageToTooltip returning. Was {__instance?.m_SettingsEntity?.GetType().Name ?? "null type?"}"); 
+        Main.Logger.Log($"AddModImageToTooltip returning. Was {__instance.m_SettingsEntity?.GetType().Name ?? "null type?"}");
 #endif
       }
+
+      return __result;
     }
 
     public override void ExtendedActions(DropdownItemView view) =>

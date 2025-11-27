@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Kingmaker.Code.UI.MVVM.View.Tooltip.Bricks;
+﻿using Kingmaker.Code.UI.MVVM.View.Tooltip.Bricks;
 using Kingmaker.Code.UI.MVVM.VM.Tooltip.Utils;
 using Owlcat.Runtime.UI.Tooltips;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using HarmonyLib;
 using Owlcat.Runtime.UI.Utility;
 using Kingmaker.Settings;
 using static ModMenu.NewTypes.ModRecording.StringsAndIcons;
@@ -17,7 +11,7 @@ using static ModMenu.NewTypes.ModRecording.StringsAndIcons;
 namespace ModMenu.NewTypes.ModRecording
 {
   [HarmonyPatch]
-  internal class TooltipBrickRecordedMod(ModInfo modRecord) : ITooltipBrick
+  internal class TooltipBrickRecordedMod : ITooltipBrick
   {
 
     /// <summary>
@@ -36,8 +30,12 @@ namespace ModMenu.NewTypes.ModRecording
     }
 
     [NonSerialized]
-    ModInfo mod = modRecord;
+    ModInfo mod;
 
+    public TooltipBrickRecordedMod(ModInfo modRecord)
+    {
+      mod = modRecord;
+    }
     public virtual TooltipBaseBrickVM GetVM()
     {
       return new TooltipBrickRecordedModVM(mod);
@@ -56,9 +54,9 @@ namespace ModMenu.NewTypes.ModRecording
   internal class TooltipBrickRecordedModView : TooltipBaseBrickView<TooltipBrickRecordedModVM>
   {
     [SerializeField]
-    public TextMeshProUGUI m_Text;
+    public TextMeshProUGUI m_Text = null!;
     [SerializeField]
-    public Image m_Image;
+    public Image m_Image = null!;
 
     internal static TooltipBrickRecordedModView config
     {
@@ -69,7 +67,7 @@ namespace ModMenu.NewTypes.ModRecording
         return m_config;
       }
     }
-    static TooltipBrickRecordedModView m_config;
+    static TooltipBrickRecordedModView? m_config;
     static TooltipBrickRecordedModView()
     {
     }
@@ -90,7 +88,7 @@ namespace ModMenu.NewTypes.ModRecording
     static TooltipBrickRecordedModView GenerateConfig()
     {
 #if DEBUG
-      Main.Logger.Log("TooltipBrickRecordedModView GenerateConfig"); 
+      Main.Logger.Log("TooltipBrickRecordedModView GenerateConfig");
 #endif
       var go = new GameObject("TooltipBrickRecordedModView", typeof(RectTransform));
       go.SetActive(true);
@@ -109,7 +107,7 @@ namespace ModMenu.NewTypes.ModRecording
       view.m_Text = text;
       go.SetActive(true);
       go = new GameObject("Image", typeof(RectTransform));
-      var t = go.transform as RectTransform;
+      var t = (RectTransform)go.transform;
       t.anchorMin = new(1.05f, 0.05f);
       t.anchorMax = new(1.05f, 0.95f);
       t.offsetMin = new(24, 0);
@@ -121,9 +119,6 @@ namespace ModMenu.NewTypes.ModRecording
       f.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
       view.m_Image = image;
-#if DEBUG
-      Main.Logger.Log("TooltipBrickRecordedModView GenerateConfig FInished");
-#endif
       return view;
 
 
