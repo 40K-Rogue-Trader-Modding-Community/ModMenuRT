@@ -236,6 +236,31 @@ namespace ModMenu.NewTypes.ModRecording
     }
     static Texture2D? m_IconOkTexture;
     static Sprite? m_IconOk;
+    internal static Sprite IconCollapsibleButtonImage
+    {
+      get
+      {
+        if (m_IconCollapsibleButtonImage == null)
+        {
+          if (m_IconCollapsibleButtonImageTexture == null)
+          {
+            m_IconCollapsibleButtonImageTexture = new Texture2D(17, 9, TextureFormat.RGBA32, false);
+            m_IconCollapsibleButtonImageTexture.wrapMode = TextureWrapMode.Clamp;
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("ModMenu.NewTypes.ModRecording.Icons.UI_CollapsibleHeader_Arrow.png");
+            var bytes = new byte[stream.Length];
+            stream.Read(bytes, 0, bytes.Length);
+            m_IconCollapsibleButtonImageTexture.LoadImage(bytes);
+          }
+          m_IconCollapsibleButtonImage = Sprite.Create(m_IconCollapsibleButtonImageTexture, new Rect(0, 0, 17, 9), Vector2.zero, 100f);
+        }
+        return m_IconCollapsibleButtonImage;
+      }
+
+    }
+    static Texture2D m_IconCollapsibleButtonImageTexture;
+    static Sprite m_IconCollapsibleButtonImage;
+	
     internal static Sprite IconOk
     {
       get

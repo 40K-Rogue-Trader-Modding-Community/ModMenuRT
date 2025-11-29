@@ -26,6 +26,7 @@
 		<None Remove="NewTypes\ModRecording\Icons\UI_QuestNotification_IconFail.png" />
 		<None Remove="NewTypes\ModRecording\Icons\UI_QuestNotification_IconNew.png" />
 		<None Remove="NewTypes\ModRecording\Icons\UI_QuestNotification_IconOk.png" />
+		<None Remove="NewTypes\ModRecording\Icons\UI_CollapsibleHeader_Arrow.png" />
 		<None Remove="img\TestSettingsIllustration.png" />
 		<None Remove="img\TestSettingsIllustration2.png" />
 		<None Remove="img\WittleWolfie.png" />
@@ -37,6 +38,7 @@
 		<EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconFail.png" />
 		<EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconNew.png" />
 		<EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_QuestNotification_IconOk.png" />
+		<EmbeddedResource Include="NewTypes\ModRecording\Icons\UI_CollapsibleHeader_Arrow.png" />
 		<EmbeddedResource Include="img\TestSettingsIllustration.png" />
 		<EmbeddedResource Include="img\TestSettingsIllustration2.png" />
 		<EmbeddedResource Include="img\WittleWolfie.png" />

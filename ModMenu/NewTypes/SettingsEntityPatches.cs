@@ -32,6 +32,7 @@ using Kingmaker.Code.UI.MVVM;
 using static UnityModManagerNet.UnityModManager;
 using Kingmaker.Utility.DotNetExtensions;
 using UniRx;
+using ModMenu.NewTypes.ModRecording;
 
 namespace ModMenu.NewTypes
 {
@@ -126,10 +127,31 @@ namespace ModMenu.NewTypes
         {
         Main.Logger.NativeLog("Collecting setting entities.");
 
-        __instance.m_SettingEntities.Clear();
-        __instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(UISettingsEntityDropdownModMenuEntry.instance)));
+        // __instance.m_SettingEntities.Clear();
+
+          var entities = __instance.m_SettingEntities;
+          bool alreadyHaveModMenuDropdown =
+          entities.Count > 0 && entities[0] is SettingsEntityDropdownVM dropVM && dropVM.m_UISettingsEntity == UISettingsEntityDropdownModMenuEntry.instance;
+#if DEBUG
+            Main.Logger.Log($"alreadyHaveModMenuDropdown is {alreadyHaveModMenuDropdown}");
+#endif
+          var entitiesAsIEnum = alreadyHaveModMenuDropdown ? entities.Skip(1) : entities;
+          entitiesAsIEnum.ForEach(e => e.Dispose());
+          if (alreadyHaveModMenuDropdown)
+            while (entities.Count > 1)
+              entities.RemoveLast();
+          else
+            entities.Clear();
+          if (!alreadyHaveModMenuDropdown)
+            entities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(UISettingsEntityDropdownModMenuEntry.instance)));
           if (UISettingsEntityDropdownModMenuEntry.instance.Setting.GetTempValue() == ModsMenuEntry.EmptyInstance)
             return false;
+		
+		/*
+		__instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(UISettingsEntityDropdownModMenuEntry.instance)));
+          if (UISettingsEntityDropdownModMenuEntry.instance.Setting.GetTempValue() == ModsMenuEntry.EmptyInstance)
+            return false;
+		*/
         //__instance.m_SettingEntities.Add(__instance.AddDisposableAndReturn(SettingsVM.GetVMForSettingsItem(separator)));
 
             //Here should be a toggle for mod disabling, but do we need it?
@@ -357,13 +379,21 @@ namespace ModMenu.NewTypes
       {
         Main.Logger.NativeLog("Creating collapsible header template.");
 
+        prefab.name = nameof(SettingsEntityCollapsibleHeaderView);
+
         // Destroy the stuff we don't want from the source prefab
         Object.DestroyImmediate(prefab.GetComponent<SettingsEntityHeaderView>());
         Object.DontDestroyOnLoad(prefab);
 
         var buttonPC = prefab.GetComponentInChildren<ExpandableCollapseMultiButtonPC>();
         var buttonPrefab = buttonPC.gameObject;
-        buttonPrefab.transform.Find("_CollapseArrowImage").gameObject.SetActive(true);
+        var collapsibleImage = buttonPC.m_CollapseImage.GetComponent<Image>();
+        collapsibleImage.sprite = StringsAndIcons.IconCollapsibleButtonImage; //assign something here;
+        collapsibleImage.color = Color.white;
+        ((RectTransform)collapsibleImage.transform).offsetMin = new Vector2(16f, -7.2f);
+        ((RectTransform)collapsibleImage.transform).offsetMax = new Vector2(36f, 7f);
+        collapsibleImage.gameObject.gameObject.SetActive(true);
+		// buttonPrefab.transform.Find("_CollapseArrowImage").gameObject.SetActive(true);
         var button = buttonPrefab.GetComponent<OwlcatMultiButton>();
         button.Interactable = true;
 
