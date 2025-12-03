@@ -1,9 +1,8 @@
 ﻿using System.Text;
 using System.Reflection.Emit;
+using System.IO.Compression;
 using Kingmaker.EntitySystem.Persistence;
 using Kingmaker.EntitySystem.Persistence.JsonUtility;
-using Kingmaker.Utility;
-using Kingmaker.EntitySystem.Persistence.SavesStorage;
 using Newtonsoft.Json;
 using UnityModManagerNet;
 using Kingmaker.Modding;
@@ -203,6 +202,43 @@ namespace ModMenu.NewTypes.ModRecording
         }
       }
     }
+
+    public static void SaveJsonExploited(ZipSaver saver, string name, string json)
+    {
+      name += ".json";
+      ZipArchiveEntry zipArchiveEntry = saver.FindEntry(name);
+      if (zipArchiveEntry == null)
+      {
+        zipArchiveEntry = saver.ZipFile.CreateEntry(name);
+      }
+      using (Stream stream = zipArchiveEntry.Open())
+      {
+        using (StreamWriter streamWriter = new StreamWriter(stream))
+        {
+          streamWriter.Write(json);
+          if (saver.m_Mode != ISaver.Mode.WriteOnly)
+          {
+            stream.SetLength(stream.Position);
+          }
+        }
+      }
+    }
+
+    public static string ReadJsonExploited(ZipSaver saver, string name)
+    {
+      ZipArchiveEntry zipArchiveEntry = saver.FindEntry(name + ".json");
+      if (zipArchiveEntry == null)
+      {
+        return null;
+      }
+      string result;
+      using (StreamReader streamReader = new StreamReader(zipArchiveEntry.Open()))
+      {
+        result = streamReader.ReadToEnd();
+      }
+      return result;
+    }
+
     #region OldPatchToNotReadModRecord
 
 

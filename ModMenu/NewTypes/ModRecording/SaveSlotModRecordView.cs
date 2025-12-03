@@ -26,6 +26,9 @@ using UnityEngine.UI;
 using UnityModManagerNet;
 using static ModMenu.NewTypes.ModRecording.StringsAndIcons;
 using static ModMenu.NewTypes.ModRecording.TooltipTemplateModRecord;
+using Owlcat.Runtime.UI.Controls;
+using Kingmaker.Code.UI.MVVM.VM.Common;
+using Kingmaker.Code.UI.MVVM.View.Common.PC;
 
 namespace ModMenu.NewTypes.ModRecording
 {
@@ -36,16 +39,16 @@ namespace ModMenu.NewTypes.ModRecording
     const string nameContainer = "ModMenuContainerForModRecordView";
     const string nameRecordView = "ModMenuModRecordView";
 
-    SaveInfoWithModList? Record;
+    SaveInfoWithModList Record;
 
-    TextMeshProUGUI m_ModStuff = null!;
-    Image SpriteModStuff = null!;
-    TextMeshProUGUI m_NoDep = null!;
-    Image SpriteNoDep = null!;
-    OwlcatButton? ButtonEnable;
-    OwlcatButton? ButtonDisable;
-    OwlcatSelectable TooltipModStuff = null!;
-    OwlcatSelectable TooltipNoDep = null!;
+    TextMeshProUGUI m_ModStuff;
+    Image SpriteModStuff;
+    TextMeshProUGUI m_NoDep;
+    Image SpriteNoDep;
+    OwlcatButton ButtonEnable;
+    OwlcatButton ButtonDisable;
+    OwlcatSelectable TooltipModStuff;
+    OwlcatSelectable TooltipNoDep;
 
     public override void BindViewImplementation()
     {
@@ -60,10 +63,30 @@ namespace ModMenu.NewTypes.ModRecording
         return;
       };
       Record = modInfo;
-      ((SaveSlotWithModListVM)ViewModel).BoundModRecordView = this;
+      (ViewModel as SaveSlotWithModListVM).BoundModRecordView = this;
       Refresh();
-      TooltipModStuff.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.WithDependency, this));
-      TooltipNoDep.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.NoDependency, this));
+      AddDisposable(TooltipModStuff.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.WithDependency, this)));
+      AddDisposable(TooltipNoDep.SetTooltip(new TooltipTemplateModRecord(TooltipTemplateModRecordEnum.NoDependency, this)));
+
+      var maybeCommonView = transform.root.GetComponent<ViewBase<CommonVM>>();
+      Transform infoWindow;
+      if (maybeCommonView == null)
+      {
+        Debug.LogWarning("Did not find CommonView. Will be no tooltips");
+        return;
+      }
+      if (maybeCommonView is CommonPCView pCView)
+        infoWindow = pCView.transform.Find("CommonCanvas/InfoWindowPCView");
+      else
+        infoWindow = maybeCommonView.transform.Find("CommonCanvas/InfoWindowConsoleView");
+
+      if (infoWindow == null)
+      {
+        Debug.LogWarning("Did not find CommonView. Will be no tooltips");
+        return;
+      }
+
+      infoWindow.SetAsLastSibling();
     }
 
     //AAAAAAAAAAAAAaaaa
@@ -103,9 +126,9 @@ namespace ModMenu.NewTypes.ModRecording
     internal void Refresh()
     {
 #if DEBUG
-      Main.Logger.Log($"SaveSlotModRecordView run Refresh");
+      Main.Logger.Log($"SaveSlotModRecordView run Refresh"); 
 #endif
-      var saveSlot = (SaveSlotWithModListVM)ViewModel;
+      var saveSlot = ViewModel as SaveSlotWithModListVM;
       var totalMods = saveSlot.OwlMods.Count + saveSlot.UMMMods.Count + saveSlot.OtherMods.Count;
       bool Console = ButtonEnable == null || ButtonDisable == null;
       if (totalMods == 0)
@@ -117,7 +140,16 @@ namespace ModMenu.NewTypes.ModRecording
         m_NoDep.transform.parent.transform.gameObject.SetActive(false);
         m_ModStuff.transform.parent.gameObject.SetActive(true);
         if (!Console)
-          ButtonEnable!.SetInteractable(false);
+        {
+          var text = ButtonDisable.GetComponentInChildren<TextMeshProUGUI>();
+          if (!object.ReferenceEquals(text.text, ButtonDisableExtraDeactivated))
+            ButtonDisable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
+          text = ButtonEnable.GetComponentInChildren<TextMeshProUGUI>();
+          if (!object.ReferenceEquals(text.text, ButtonEnableMissingDeactivated))
+            ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonEnableMissingDeactivated;
+          ButtonEnable.SetInteractable(false);
+          ButtonDisable.SetInteractable(false);
+        }
         return;
       }
 
@@ -165,8 +197,8 @@ namespace ModMenu.NewTypes.ModRecording
         m_NoDep.transform.parent.gameObject.SetActive(true);
         if (!Console)
         {
-          ButtonEnable!.gameObject.SetActive(true);
-          ButtonDisable!.gameObject.SetActive(true);
+          ButtonEnable.gameObject.SetActive(true);
+          ButtonDisable.gameObject.SetActive(true);
         }
       }
       if (!Console)
@@ -175,28 +207,28 @@ namespace ModMenu.NewTypes.ModRecording
         {
           //Main.Logger.Log($"SaveSlotModRecordView - disabled the ButtonEnable");
 
-          ButtonEnable!.Interactable = false;
-          ButtonEnable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonEnableMissingDeactivated;
+          ButtonEnable.Interactable = false;
+          ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonEnableMissingDeactivated;
         }
         else
         {
           //Main.Logger.Log($"SaveSlotModRecordView - enabled the ButtonEnable");
-          ButtonEnable!.Interactable = true;
-          ButtonEnable!.GetComponentInChildren<TextMeshProUGUI>().text = string.Format(ButtonEnableMissingDeactivated, saveSlot.DisabledMods);
+          ButtonEnable.Interactable = true;
+          ButtonEnable.GetComponentInChildren<TextMeshProUGUI>().text = string.Format(ButtonEnableMissing, saveSlot.DisabledMods);
         }
 
         if (UnityModManager.ModEntries.Where(mod => mod.Enabled).Cast<object>().Concat(OwlcatModificationsManager.Instance.AppliedModifications.Cast<object>())
           .Any(entry => !saveSlot.AllMods.Any(mod => mod.mod == entry)))
         {
           //Main.Logger.Log($"SaveSlotModRecordView - enabled the ButtonDisable");
-          ButtonDisable!.Interactable = true;
-          ButtonDisable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
+          ButtonDisable.Interactable = true;
+          ButtonDisable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
         }
         else
         {
           //Main.Logger.Log($"SaveSlotModRecordView - disabled the ButtonDisable");
-          ButtonDisable!.Interactable = false;
-          ButtonDisable!.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
+          ButtonDisable.Interactable = false;
+          ButtonDisable.GetComponentInChildren<TextMeshProUGUI>().text = ButtonDisableExtraDeactivated;
         }
       }
     }
@@ -205,7 +237,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPostfix]
     static void SaveSlotView_BindViewImplementation_PatchToBindModRecordList(SaveLoadBaseView __instance)
     {
-      var go = __instance.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
+      var go = __instance?.m_DetailedSaveSlotView.GetComponent<SaveSlotModRecordView>();
       if (go == null)
       {
         Main.Logger.Error("SaveSlotModRecordView - failed to find the game object with the view! Will not bind.");
@@ -224,7 +256,7 @@ namespace ModMenu.NewTypes.ModRecording
     [HarmonyPostfix]
     static void SaveSlotView_BindViewImplementation_PatchToUnbindModRecordList(SaveLoadBaseView __instance)
     {
-      var go = __instance?.m_DetailedSaveSlotView.transform.Find(nameContainer)?.Find(nameRecordView);
+      var go = __instance?.m_DetailedSaveSlotView.GetComponent<SaveSlotModRecordView>();
       if (go == null)
       {
         Main.Logger.Error("SaveSlotModRecordView - failed to find the game object with the view! Will not unbind.");
@@ -240,233 +272,162 @@ namespace ModMenu.NewTypes.ModRecording
       view.Unbind();
     }
 
-
-
     [HarmonyPatch(typeof(SaveLoadBaseView), nameof(SaveLoadBaseView.Initialize))]
     [HarmonyPrefix]
     static void SaveLoadView_Initialize_PatchToInjectModRecordView(SaveLoadBaseView __instance)
     {
       //Stopwatch watch = Stopwatch.StartNew();
-      if (__instance.transform.Find(nameContainer) != null)
+      if (__instance?.m_DetailedSaveSlotView.GetComponent<SaveSlotModRecordView>())
         return; //already made changes
 
       var material =
         TMP_Settings.instance?.m_defaultFontAsset?.material;
       var fontAsset = TMP_Settings.instance?.m_defaultFontAsset;
 
-      bool isPcView = __instance.m_DetailedSaveSlotView is SaveSlotPCView;
       var _SaveSlotPCView = __instance.m_DetailedSaveSlotView as SaveSlotPCView;
+      bool isPcView = _SaveSlotPCView != null;
+      RectTransform rectTransform;
 
-      var container = new GameObject(nameContainer, typeof(RectTransform));
-      var rectTransform = (RectTransform) container.transform;
-      rectTransform.SetParent(__instance.m_DetailedSaveSlotView.gameObject.transform, false);
-      rectTransform.SetAsLastSibling();
-      rectTransform.offsetMin = new(0.765f, 54.3735f);
-      rectTransform.offsetMax = new(-1.6f, 1f);
-      if (isPcView)
+      var may = _SaveSlotPCView.transform.parent.GetComponentInParent<VerticalLayoutGroup>(true);
+      if (may)
       {
-        rectTransform.anchorMin = new(0.015f, 0);
-        rectTransform.anchorMax = new(0.89f, 0.22f);
+        may.childForceExpandWidth = false;
+        may.childAlignment = TextAnchor.UpperCenter;
       }
       else
       {
-        rectTransform.anchorMin = new(0.015f, -0.1f);
-        rectTransform.anchorMax = new(1.465f, 0.22f);
+#if DEBUG
+        Main.Logger.Warning("NO group"); 
+#endif
       }
 
-      var recordView = new GameObject(nameRecordView, typeof(RectTransform));
-      var recordViewRectTrans = (RectTransform) recordView.transform;
-      recordViewRectTrans.SetParent(rectTransform, false);
-      recordViewRectTrans.anchorMin = new Vector2(0, 0);
-      recordViewRectTrans.anchorMax = new Vector2(0.6f, 1);
-      recordViewRectTrans.offsetMin = new Vector2(0, 0);
-      recordViewRectTrans.offsetMax = new Vector2(0, 0);
-      var modRecordView = recordView.AddComponent<SaveSlotModRecordView>();
-
-      var modRecordVerticalGroup = new GameObject("modRecordVerticalGroup", typeof(RectTransform));
-      var modRecordVerticalGroupRectTrans = (RectTransform) modRecordVerticalGroup.transform;
-      modRecordVerticalGroupRectTrans.SetParent(recordViewRectTrans, false);
-      modRecordVerticalGroupRectTrans.anchorMin = new Vector2(0, 0.3f);
-      modRecordVerticalGroupRectTrans.anchorMax = new Vector2(1, 1);
-      modRecordVerticalGroupRectTrans.offsetMin = new Vector2(0, 20);
-      modRecordVerticalGroupRectTrans.offsetMax = new Vector2(0, -2);
-      var modVerGroup = modRecordVerticalGroup.AddComponent<VerticalLayoutGroupWorkaround>();
-      modVerGroup.DoWorkaround = false;
-      modVerGroup.spacing = 20;
-      modVerGroup.childAlignment = TextAnchor.MiddleLeft;
-      modVerGroup.childForceExpandHeight = false;
+      rectTransform = __instance.m_DetailedSaveSlotView.gameObject.transform as RectTransform;
+      var modRecordView = rectTransform.gameObject.AddComponent<SaveSlotModRecordView>();
 
       var ModStuffHolder = new GameObject("ModStuffHolder", typeof(RectTransform));
-      var ModStuffHolderRectTrans = (RectTransform) ModStuffHolder.transform;
-      ModStuffHolderRectTrans.SetParent(modRecordVerticalGroupRectTrans, false);
+      var ModStuffHolderRectTrans = ModStuffHolder.transform as RectTransform;
+      ModStuffHolderRectTrans.SetParent(rectTransform, false);
       ModStuffHolderRectTrans.anchorMin = new Vector2(0, 0);
       ModStuffHolderRectTrans.anchorMin = new Vector2(1, 1);
-      ModStuffHolderRectTrans.offsetMin = new Vector2(0, 0);
-      ModStuffHolderRectTrans.offsetMax = new Vector2(0, 0);
-      ModStuffHolder.AddComponent<HorizontalLayoutGroupWorkaround>();
+      var lay = ModStuffHolder.AddComponent<LayoutElementExtended>();
+      lay.PreferredWidthExtended = new()
+      {
+        ReferenceType = LayoutElementExtendedValue.ReferenceTypes.Width,
+        Reference = (RectTransform)ModStuffHolderRectTrans.parent,
+        ReferenceDelta = -10,
+        Enabled = true
+      };
+      var esfFitter1 = ModStuffHolder.AddComponent<ContentSizeFitterExtended>();
+      esfFitter1.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+      esfFitter1.m_VerticalFit = ContentSizeFitterExtended.FitMode.Unconstrained;
+
       var ModStuff = new GameObject("ModStuff", typeof(RectTransform));
-      var ModStuffRect = (RectTransform) ModStuff.transform;
+      var ModStuffRect = ModStuff.transform as RectTransform;
       ModStuffRect.SetParent(ModStuffHolderRectTrans, false);
-      ModStuffRect.anchorMin = new Vector2(0f, 0f);
-      ModStuffRect.anchorMax = new Vector2(1, 1);
-      ModStuffRect.offsetMin = new Vector2(0, 0);
-      ModStuffRect.offsetMax = new Vector2(0, 0);
-      modRecordView.m_ModStuff = ModStuff.AddComponent<TextMeshProUGUI>();
-      modRecordView.m_ModStuff.m_fontAsset = fontAsset;
-      modRecordView.m_ModStuff.fontSharedMaterial = material;
-      modRecordView.m_ModStuff.color = new Color(0.1961f, 0.2078f, 0.2706f, 1);
-      modRecordView.m_ModStuff.fontSizeMax = 35;
-      modRecordView.m_ModStuff.fontSize = 18;
-      modRecordView.m_ModStuff.enableWordWrapping = true;
-      modRecordView.m_ModStuff.enableAutoSizing = true;
-      modRecordView.m_ModStuff.margin = new(0, 0, 52, 0);
-      modRecordView.m_ModStuff.alignment = TextAlignmentOptions.MidlineJustified;
-      modRecordView.TooltipModStuff = ModStuff.AddComponent<OwlcatSelectable>();
+      ContentSizeFitterExtended esfFitter  = ModStuff.AddComponent<ContentSizeFitterExtended>();
+      esfFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.Clamp;
+      esfFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.Unconstrained;
+      var tmp = ModStuff.AddComponent<TextMeshProUGUI>();
+      tmp.m_fontAsset = fontAsset;
+      tmp.fontSharedMaterial = material;
+      tmp.color = new Color(0.1961f, 0.2078f, 0.2706f, 1);
+      tmp.fontSizeMax = 18;
+      tmp.fontSizeMin = 10;
+      //tmp.m_fontSizeBase = 18;
+      tmp.autoSizeTextContainer = true;
+      tmp.enableAutoSizing = false;
+      tmp.textWrappingMode = TextWrappingModes.Normal;
+      tmp.margin = new(0, 0, 47, 0);
+      tmp.alignment = TextAlignmentOptions.MidlineJustified;
+      modRecordView.m_ModStuff = tmp;
       ModStuff.SetActive(true);
 
       var ModStuffSprite = new GameObject("ModStuffSprite", typeof(RectTransform));
       var ModStuffSpriteRectTrans = ModStuffSprite.GetComponent<RectTransform>();
       modRecordView.SpriteModStuff = ModStuffSprite.AddComponent<Image>();
-      var esfFitter = ModStuffSprite.AddComponent<ContentSizeFitterExtended>();
+      esfFitter = ModStuffSprite.AddComponent<ContentSizeFitterExtended>();
       esfFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
       esfFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      ModStuffSpriteRectTrans.SetParent(ModStuffRect, false);
+      ModStuffSpriteRectTrans.SetParent(ModStuffHolderRectTrans, false);
       ModStuffSpriteRectTrans.anchorMin = new(1f, 0.5f);
       ModStuffSpriteRectTrans.anchorMax = new(1f, 0.5f);
       ModStuffSpriteRectTrans.offsetMin = new(-42, 0);
       ModStuffSpriteRectTrans.offsetMax = new(0, 0);
       ModStuffSprite.SetActive(true);
 
+      modRecordView.TooltipModStuff = ModStuffSprite.AddComponent<OwlcatSelectable>();
 
-      var ExclusionsHolder = new GameObject("ExclusionsHolder", typeof(RectTransform));
-      var ExclusionsHolderRectTrans = (RectTransform)ExclusionsHolder.transform;
-      ExclusionsHolderRectTrans.SetParent(modRecordVerticalGroupRectTrans, false);
-      ExclusionsHolderRectTrans.anchorMin = new Vector2(0.0f, 0.0f);
-      ExclusionsHolderRectTrans.anchorMax = new Vector2(1f, 1f);
-      ExclusionsHolderRectTrans.offsetMin = new Vector2(0, 0);
-      ExclusionsHolderRectTrans.offsetMax = new Vector2(0, 0);
-      ExclusionsHolder.AddComponent<HorizontalLayoutGroupWorkaround>();
+      var ExclusionsHolder = GameObject.Instantiate(ModStuffHolder, ModStuffHolder.transform.parent);
+      ExclusionsHolder.name = "ExclusionsHolder";
+      var Exclusions = ExclusionsHolder.transform.GetChild(0);
+      Exclusions.name = "Exclusions";
+      var ExclusionsSprite = ExclusionsHolder.transform.GetChild(1);
+      ExclusionsSprite.name = "ExclusionsSprite";
+      modRecordView.m_NoDep = Exclusions.GetComponent<TextMeshProUGUI>();
+      modRecordView.SpriteNoDep = ExclusionsSprite.GetComponent<Image>();
+      modRecordView.TooltipNoDep = ExclusionsSprite.GetComponent<OwlcatSelectable>();
 
-      var Exclusions = new GameObject("Exclusions", typeof(RectTransform));
-      var ExclusionsRectTrans = (RectTransform)Exclusions.transform;
-      ExclusionsRectTrans.SetParent(ExclusionsHolderRectTrans, false);
-      ExclusionsRectTrans.anchorMin = new Vector2(0, 0);
-      ExclusionsRectTrans.anchorMax = new Vector2(1f, 1f);
-      ExclusionsRectTrans.offsetMin = new Vector2(0, 0);
-      ExclusionsRectTrans.offsetMax = new Vector2(0, 0);
-      modRecordView.m_NoDep = Exclusions.AddComponent<TextMeshProUGUI>();
-      modRecordView.m_NoDep.m_fontAsset = fontAsset;
-      modRecordView.m_NoDep.fontSharedMaterial = material;
-      modRecordView.m_NoDep.color = new Color(0.1961f, 0.2078f, 0.2706f, 1);
-      modRecordView.m_NoDep.fontSizeMax = 35;
-      modRecordView.m_NoDep.fontSize = 25;
-      modRecordView.m_NoDep.enableWordWrapping = true;
-      modRecordView.m_NoDep.autoSizeTextContainer = true;
-      modRecordView.m_NoDep.enableAutoSizing = false;
-      modRecordView.m_NoDep.margin = new(0, 0, 52, 0);
-      modRecordView.m_NoDep.alignment = TextAlignmentOptions.MidlineJustified;
-      modRecordView.TooltipNoDep = Exclusions.AddComponent<OwlcatSelectable>();
-      Exclusions.SetActive(true);
+      if (!isPcView)
+        goto AfterButtons;
 
-      var ExclusionsSprite = new GameObject("ExclusionsSprite", typeof(RectTransform));
-      var ExclusionsSpriteRectTrans = ExclusionsSprite.GetComponent<RectTransform>();
-      modRecordView.SpriteNoDep = ExclusionsSprite.AddComponent<Image>();
-      esfFitter = ExclusionsSprite.AddComponent<ContentSizeFitterExtended>();
-      esfFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      esfFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-      ExclusionsSpriteRectTrans.SetParent(ExclusionsRectTrans, false);
-      ExclusionsSpriteRectTrans.anchorMin = new(1f, 0.5f);
-      ExclusionsSpriteRectTrans.anchorMax = new(1f, 0.5f);
-      ExclusionsSpriteRectTrans.offsetMin = new(-50, 0);
-      ExclusionsSpriteRectTrans.offsetMax = new(0, 0);
-      ExclusionsSprite.SetActive(true);
-
-      if (isPcView)
+      var ModRecordButtons = new GameObject("ModRecordButtons", typeof(RectTransform));
+      var ModRecordButtonsRectTrans = ModRecordButtons.transform as RectTransform;
+      ModRecordButtonsRectTrans.SetParent(rectTransform, false);
+      var ButtonsHorGroup = ModRecordButtons.AddComponent<HorizontalLayoutGroupWorkaround>();
+      ButtonsHorGroup.childAlignment = TextAnchor.LowerCenter;
+      ButtonsHorGroup.spacing = 10; 
+      lay = ModRecordButtons.AddComponent<LayoutElementExtended>();
+      lay.PreferredWidthExtended = new()
       {
-        var ModRecordButtons = new GameObject("ModRecordButtons", typeof(RectTransform));
-        var ModRecordButtonsRectTrans = (RectTransform) ModRecordButtons.transform;
-        ModRecordButtonsRectTrans.SetParent(recordViewRectTrans, false);
-        ModRecordButtonsRectTrans.anchorMin = new Vector2(0, 0);
-        ModRecordButtonsRectTrans.anchorMax = new Vector2(1, 0.33f);
-        ModRecordButtonsRectTrans.offsetMin = new Vector2(0, 0);
-        ModRecordButtonsRectTrans.offsetMax = new Vector2(0, -4);
-        var ButtonsHorGroup = ModRecordButtons.AddComponent<HorizontalLayoutGroupWorkaround>();
-        ButtonsHorGroup.childAlignment = TextAnchor.LowerCenter;
-        ButtonsHorGroup.spacing = 10;
-
-        var ButtonPrototype = _SaveSlotPCView!.m_DeleteButton;
-        var Button = Instantiate(ButtonPrototype);
-        modRecordView.ButtonEnable = Button;
-        var text = Button.GetComponentInChildren<TextMeshProUGUI>();
-        if (text != null)
-        {
-          text.text = ButtonEnableMissingDeactivated;
-          text.enableAutoSizing = true;
-          text.fontSizeMin = 2;
-          text.margin = new Vector4(5, 5, 5, 5);
-        }
-        Button.transform.SetParent(ModRecordButtonsRectTrans, false);
-        Button.m_OnLeftClick = new();
-        Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(true));
-        var sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
-        sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-        Button = Instantiate(ButtonPrototype);
-        modRecordView.ButtonDisable = Button;
-        text = Button.GetComponentInChildren<TextMeshProUGUI>();
-        if (text != null)
-        {
-          text.text = ButtonDisableExtraDeactivated;
-          text.enableAutoSizing = true;
-          text.fontSizeMin = 2;
-          text.margin = new Vector4(5, 5, 5, 5);
-        }
-        Button.transform.SetParent(ModRecordButtonsRectTrans, false);
-        Button.m_OnLeftClick = new();
-        Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(false));
-        sizeFitter = Button.gameObject.AddComponent<ContentSizeFitterExtended>();
-        sizeFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+        ReferenceType = LayoutElementExtendedValue.ReferenceTypes.Width,
+        Reference = (RectTransform)ModStuffHolderRectTrans.parent,
+        ReferenceDelta = -10,
+        Enabled = true
+      };
+      esfFitter = ModRecordButtons.AddComponent<ContentSizeFitterExtended>();
+      esfFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
+      esfFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.Clamp;
 
 
-        var buttons = __instance.m_DetailedSaveSlotView.transform.Find("Info/Buttons")?.gameObject;
-        if (buttons == null)
-        {
-          Main.Logger.Error("SaveLoadView_Initialize_PatchToInjectModRecordView - failed to find the Buttons game object on the detailed save slot view");
-          return;
-        }
-        buttons.SetActive(false);
-
-
-        var oldHor = buttons.GetComponent<HorizontalLayoutGroupWorkaround>();
-        DestroyImmediate(oldHor);
-        try
-        {
-          var verGroup = buttons.AddComponent<VerticalLayoutGroupWorkaround>();
-          verGroup.DoWorkaround = false;
-          verGroup.spacing = 20;
-          verGroup.childAlignment = TextAnchor.MiddleCenter;
-        }
-        catch (Exception ex)
-        {
-          Main.Logger.LogException(ex);
-        }
-
-        var buttonsFitter = buttons.GetComponent<ContentSizeFitterExtended>();
-        buttonsFitter.m_VerticalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-        buttonsFitter.m_HorizontalFit = ContentSizeFitterExtended.FitMode.PreferredSize;
-        var buttonsRectTransform = (RectTransform) buttons.transform;
-        buttonsRectTransform.anchorMin = new Vector2(0.6f, 0);
-        buttonsRectTransform.anchorMax = new Vector2(1, 1);
-        buttons.transform.SetParent(container.transform);
-        buttons.transform.SetAsLastSibling();
-        buttons.SetActive(true);
+      var ButtonPrototype = _SaveSlotPCView.m_DeleteButton;
+      var Button = Instantiate(ButtonPrototype);
+      Button.name = "ModRecordButtonEnable";
+      rectTransform = (RectTransform)Button.transform;
+      rectTransform.anchorMin = new(0, 0);
+      rectTransform.anchorMax = new(0.5f, 1);
+      var unnecessaryImage = Button.transform.Find("TextBlock/Image");
+      if (unnecessaryImage)
+        { GameObject.Destroy(unnecessaryImage.gameObject); }
+      var text = Button.GetComponentInChildren<TextMeshProUGUI>();
+      if (text != null)
+      {
+        text.text = ButtonEnableMissingDeactivated;
+        text.enableAutoSizing = true;
+        text.autoSizeTextContainer = true;
+        text.fontSizeMin = 10;
+        text.fontSizeMax = 18;
+        text.margin = new Vector4(5, 5, 5, 5);
+        text.extraPadding = false;
+        text.m_padding = 0;
       }
+      Button.transform.SetParent(ModRecordButtonsRectTrans, false);
+      Button.m_OnLeftClick = new();
+      Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(true));
+      modRecordView.ButtonEnable = Button;
 
-      recordView.SetActive(true);
-      container.SetActive(true);
-      container.transform.parent.gameObject.SetActive(false);
+      Button = Instantiate(Button, Button.transform.parent);
+      rectTransform = (RectTransform)Button.transform;
+      rectTransform.anchorMin = new(0.5f, 0);
+      rectTransform.anchorMax = new(1, 1);
+      rectTransform.offsetMin = default;
+      rectTransform.offsetMax = default;
+      Button.name = "ModRecordButtonDisable";
+      Button.m_OnLeftClick = new();
+      Button.OnLeftClick.AddListener(() => modRecordView.StartDialogToProceedOrCancel(false));
+      modRecordView.ButtonDisable = Button;
 
-      //watch.Stop();
-      //Main.Logger.Log($"Creating SaveSlotVodRecordView took {watch.Elapsed} time.");
+    AfterButtons:;
+      modRecordView.gameObject.SetActive(true);
     }
 
     void StartDialogToProceedOrCancel(bool Enable)
@@ -483,12 +444,14 @@ namespace ModMenu.NewTypes.ModRecording
     {
       if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
-      var vm = (SaveSlotWithModListVM)ViewModel;
+      var vm = (ViewModel as SaveSlotWithModListVM);
       var m_owlmods = OwlcatModificationsManager.Instance.m_Settings.EnabledModifications;
       IEnumerable<string> OwlMods = m_owlmods;
       foreach (var mod in vm.AllMods.Where(m =>m.state == ModState.Disabled))
       {
-          //Main.Logger.Log($"TryEnableMissingMods - {mod.record.Id}");
+#if DEBUG
+        Main.Logger.Log($"TryEnableMissingMods - {mod.record.Id}"); 
+#endif
         try
         {
           switch (mod.record.modType)
@@ -505,7 +468,7 @@ namespace ModMenu.NewTypes.ModRecording
               }
             case SaveInfoWithModList.ModRecord.ModType.OwlMod:
               {
-                var entry = (OwlcatModification)mod.mod!;
+                var entry = mod.mod as OwlcatModification;
                 SetOwlModSetting(OwlcatModificationsManager.Instance.m_Settings.EnabledModifications.Concat(entry.Manifest.UniqueName).ToArray());
                 entry.Apply();
                 OwlMods = OwlMods.Concat(entry.Manifest.UniqueName);
@@ -525,7 +488,7 @@ namespace ModMenu.NewTypes.ModRecording
     {
       if (buttonType is not DialogMessageBoxBase.BoxButton.Yes)
         return;
-      var vm = (SaveSlotWithModListVM)ViewModel;
+      var vm = (ViewModel as SaveSlotWithModListVM);
       foreach (var mod in UnityModManager.ModEntries)
       {
         bool inRecord = vm.UMMMods.Concat(vm.Exclusions.Where(m => m.record.modType is SaveInfoWithModList.ModRecord.ModType.UmmMod)).Any(m => m.record.Id == mod.Info.Id);
